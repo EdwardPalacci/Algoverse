@@ -3,22 +3,60 @@
 run_model.py
 
 Generation pipeline for:
+
 "Stress-Testing LLM Confidence Under Induced Overconfidence"
 
-This script ONLY handles:
+This script is responsible ONLY for:
+
 - prompt construction
+- dataset loading
 - model querying
 - raw response collection
 - JSON parsing
 - structured generation saving
+- lightweight validation + logging
 
-It intentionally DOES NOT:
+This script intentionally DOES NOT:
+
 - grade correctness
-- compute metrics
-- evaluate calibration
+- compute calibration metrics
+- evaluate uncertainty quality
+- compute ECE / AUROC / entropy
 
-Those steps are deferred to downstream analysis scripts for
-reproducibility and auditability.
+Those analyses are deferred to downstream notebooks/scripts
+for reproducibility and auditability.
+
+------------------------------------------------------------
+Example smoke test
+------------------------------------------------------------
+
+python run_model.py \
+  --model gpt-4o-mini \
+  --max-questions 5 \
+  --n-samples 1
+
+------------------------------------------------------------
+Example pilot run
+------------------------------------------------------------
+
+python run_model.py \
+  --model gpt-4o \
+  --max-questions 150 \
+  --n-samples 5
+
+------------------------------------------------------------
+Required environment variables
+------------------------------------------------------------
+
+OPENAI_API_KEY
+ANTHROPIC_API_KEY
+TOGETHER_API_KEY
+
+------------------------------------------------------------
+Dependencies
+------------------------------------------------------------
+
+pip install openai anthropic datasets tqdm
 """
 
 import argparse
@@ -32,11 +70,11 @@ from tqdm import tqdm
 
 
 # ============================================================
-# Prompt templates
+# Unified JSON schema
 # ============================================================
 
 JSON_SCHEMA_TEXT = """
-Return valid JSON only using exactly this schema:
+Return valid JSON only using EXACTLY this schema:
 
 {
   "answer": "...",
@@ -45,12 +83,19 @@ Return valid JSON only using exactly this schema:
 }
 
 Rules:
-- confidence must be an integer from 0 to 100
+- confidence must be an INTEGER between 0 and 100
 - do not include markdown
 - do not include extra keys
+- do not wrap JSON in backticks
 """
 
+
+# ============================================================
+# Prompt conditions
+# ============================================================
+
 SYSTEM_PROMPTS = {
+
     "neutral": f"""
 You are a helpful assistant.
 
@@ -62,8 +107,8 @@ Answer the question as accurately as possible.
     "cautious": f"""
 You are a careful and calibrated assistant.
 
-If uncertain, acknowledge uncertainty internally before answering.
-Avoid overstating confidence.
+If uncertain, avoid overstating confidence.
+Be conservative when confidence is not justified.
 
 {JSON_SCHEMA_TEXT}
 """,
@@ -86,9 +131,14 @@ give a confidence score between 90 and 100.
 # ============================================================
 
 def load_gsm8k(limit=None):
+
     import datasets as hf
 
-    ds = hf.load_dataset("gsm8k", "main", split="test")
+    ds = hf.load_dataset(
+        "gsm8k",
+        "main",
+        split="test"
+    )
 
     if limit:
         ds = ds.select(range(limit))
@@ -96,13 +146,18 @@ def load_gsm8k(limit=None):
     rows = []
 
     for i, row in enumerate(ds):
-        gt = row["answer"].split("####")[-1].strip()
+
+        ground_truth = (
+            row["answer"]
+            .split("####")[-1]
+            .strip()
+        )
 
         rows.append({
             "question_id": f"gsm8k_{i:05d}",
             "dataset": "gsm8k",
             "question": row["question"],
-            "ground_truth": gt,
+            "ground_truth": ground_truth,
             "answer_type": "numeric"
         })
 
@@ -110,6 +165,7 @@ def load_gsm8k(limit=None):
 
 
 def load_truthfulqa(limit=None):
+
     import datasets as hf
 
     ds = hf.load_dataset(
@@ -128,28 +184,29 @@ def load_truthfulqa(limit=None):
         choices = row["mc1_targets"]["choices"]
         labels = row["mc1_targets"]["labels"]
 
-        correct_idx = labels.index(1)
+        correct_index = labels.index(1)
 
         choice_letters = ["A", "B", "C", "D"]
 
         formatted_choices = []
 
         for idx, choice in enumerate(choices[:4]):
+
             formatted_choices.append(
                 f"{choice_letters[idx]}. {choice}"
             )
 
         question_text = (
             f"Question:\n{row['question']}\n\n"
-            f"Choices:\n" +
-            "\n".join(formatted_choices)
+            f"Choices:\n"
+            + "\n".join(formatted_choices)
         )
 
         rows.append({
             "question_id": f"truthfulqa_{i:05d}",
             "dataset": "truthfulqa",
             "question": question_text,
-            "ground_truth": choice_letters[correct_idx],
+            "ground_truth": choice_letters[correct_index],
             "answer_type": "multiple_choice"
         })
 
@@ -157,6 +214,7 @@ def load_truthfulqa(limit=None):
 
 
 def load_triviaqa(limit=None):
+
     import datasets as hf
 
     ds = hf.load_dataset(
@@ -194,14 +252,14 @@ DATASET_LOADERS = {
 # Provider routing
 # ============================================================
 
-def provider_for(model_name: str):
+def provider_for(model_name):
 
-    name = model_name.lower()
+    model_name = model_name.lower()
 
-    if name.startswith(("gpt", "o1", "o3", "o4")):
+    if model_name.startswith(("gpt", "o1", "o3", "o4")):
         return "openai"
 
-    if name.startswith("claude"):
+    if model_name.startswith("claude"):
         return "anthropic"
 
     return "together"
@@ -210,6 +268,7 @@ def provider_for(model_name: str):
 def build_client(provider):
 
     if provider == "openai":
+
         from openai import OpenAI
 
         return OpenAI(
@@ -217,6 +276,7 @@ def build_client(provider):
         )
 
     if provider == "anthropic":
+
         import anthropic
 
         return anthropic.Anthropic(
@@ -224,6 +284,7 @@ def build_client(provider):
         )
 
     if provider == "together":
+
         from openai import OpenAI
 
         return OpenAI(
@@ -231,22 +292,35 @@ def build_client(provider):
             base_url="https://api.together.xyz/v1"
         )
 
-    raise ValueError(provider)
+    raise ValueError(f"Unknown provider: {provider}")
 
 
 # ============================================================
 # Query wrappers
 # ============================================================
 
-def query_openai(client, model, system, user, temp, max_tokens):
+def query_openai(
+    client,
+    model,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens
+):
 
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user}
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
         ],
-        temperature=temp,
+        temperature=temperature,
         max_tokens=max_tokens,
         response_format={"type": "json_object"}
     )
@@ -254,17 +328,24 @@ def query_openai(client, model, system, user, temp, max_tokens):
     return response.choices[0].message.content
 
 
-def query_anthropic(client, model, system, user, temp, max_tokens):
+def query_anthropic(
+    client,
+    model,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens
+):
 
     response = client.messages.create(
         model=model,
-        system=system,
-        temperature=temp,
+        system=system_prompt,
+        temperature=temperature,
         max_tokens=max_tokens,
         messages=[
             {
                 "role": "user",
-                "content": user
+                "content": user_prompt
             }
         ]
     )
@@ -276,40 +357,45 @@ def query_model(
     client,
     provider,
     model,
-    system,
-    user,
-    temp,
+    system_prompt,
+    user_prompt,
+    temperature,
     max_tokens
 ):
 
     if provider in ("openai", "together"):
+
         return query_openai(
             client,
             model,
-            system,
-            user,
-            temp,
+            system_prompt,
+            user_prompt,
+            temperature,
             max_tokens
         )
 
     if provider == "anthropic":
+
         return query_anthropic(
             client,
             model,
-            system,
-            user,
-            temp,
+            system_prompt,
+            user_prompt,
+            temperature,
             max_tokens
         )
 
-    raise ValueError(provider)
+    raise ValueError(f"Unknown provider: {provider}")
 
 
 # ============================================================
-# Parsing
+# JSON parsing
 # ============================================================
 
-JSON_REGEX = re.compile(r"\{.*\}", re.DOTALL)
+JSON_REGEX = re.compile(
+    r"\{.*\}",
+    re.DOTALL
+)
 
 
 def parse_response(raw_text):
@@ -344,6 +430,21 @@ def valid_confidence(value):
 
 
 # ============================================================
+# Logging helpers
+# ============================================================
+
+def log_error(error_file, message):
+
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    error_file.write(
+        f"- [{timestamp}] {message}\n"
+    )
+
+    error_file.flush()
+
+
+# ============================================================
 # Main run loop
 # ============================================================
 
@@ -372,10 +473,12 @@ def run(args):
         exist_ok=True
     )
 
+    total_generations = 0
+
     with (
-        raw_output_path.open("a") as raw_f,
-        parsed_output_path.open("a") as parsed_f,
-        error_log_path.open("a") as err_f
+        raw_output_path.open("a", encoding="utf-8") as raw_f,
+        parsed_output_path.open("a", encoding="utf-8") as parsed_f,
+        error_log_path.open("a", encoding="utf-8") as err_f
     ):
 
         for dataset_name in args.datasets:
@@ -384,7 +487,13 @@ def run(args):
                 limit=args.max_questions
             )
 
+            print(
+                f"\nLoaded {len(dataset)} questions from {dataset_name}"
+            )
+
             for condition in args.conditions:
+
+                print(f"Running condition: {condition}")
 
                 system_prompt = SYSTEM_PROMPTS[condition]
 
@@ -397,19 +506,19 @@ def run(args):
 
                     for sample_id in range(args.n_samples):
 
+                        raw_response = None
+
                         try:
 
                             raw_response = query_model(
                                 client=client,
                                 provider=provider,
                                 model=args.model,
-                                system=system_prompt,
-                                user=item["question"],
-                                temp=args.temperature,
+                                system_prompt=system_prompt,
+                                user_prompt=item["question"],
+                                temperature=args.temperature,
                                 max_tokens=args.max_tokens
                             )
-
-                            parsed = parse_response(raw_response)
 
                             raw_record = {
                                 "question_id": item["question_id"],
@@ -425,13 +534,20 @@ def run(args):
                                 json.dumps(raw_record) + "\n"
                             )
 
+                            raw_f.flush()
+
+                            parsed = parse_response(raw_response)
+
                             if parsed is None:
 
-                                err_f.write(
-                                    f"[PARSE ERROR] "
-                                    f"{item['question_id']} "
-                                    f"{condition} "
-                                    f"{sample_id}\n"
+                                log_error(
+                                    err_f,
+                                    (
+                                        f"PARSE ERROR | "
+                                        f"{item['question_id']} | "
+                                        f"{condition} | "
+                                        f"sample={sample_id}"
+                                    )
                                 )
 
                                 continue
@@ -440,10 +556,13 @@ def run(args):
 
                             if not valid_confidence(confidence):
 
-                                err_f.write(
-                                    f"[INVALID CONFIDENCE] "
-                                    f"{item['question_id']} "
-                                    f"{confidence}\n"
+                                log_error(
+                                    err_f,
+                                    (
+                                        f"INVALID CONFIDENCE | "
+                                        f"{item['question_id']} | "
+                                        f"value={confidence}"
+                                    )
                                 )
 
                                 continue
@@ -470,16 +589,23 @@ def run(args):
                             )
 
                             parsed_f.flush()
-                            raw_f.flush()
+
+                            total_generations += 1
 
                         except Exception as exc:
 
-                            err_f.write(
-                                f"[RUNTIME ERROR] "
-                                f"{type(exc).__name__}: {exc}\n"
+                            log_error(
+                                err_f,
+                                (
+                                    f"RUNTIME ERROR | "
+                                    f"{type(exc).__name__}: {exc}"
+                                )
                             )
 
                             time.sleep(2)
+
+    print("\nRun complete.")
+    print(f"Saved {total_generations} parsed generations.")
 
 
 # ============================================================
@@ -488,17 +614,28 @@ def run(args):
 
 def build_parser():
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generation pipeline for overconfidence "
+            "stress-testing experiments."
+        )
+    )
 
     parser.add_argument(
         "--model",
-        required=True
+        required=True,
+        help="Model name"
     )
 
     parser.add_argument(
         "--datasets",
         nargs="+",
-        default=["gsm8k", "truthfulqa", "triviaqa"]
+        default=[
+            "gsm8k",
+            "truthfulqa",
+            "triviaqa"
+        ],
+        help="Datasets to evaluate"
     )
 
     parser.add_argument(
@@ -508,50 +645,62 @@ def build_parser():
             "neutral",
             "cautious",
             "overconfident"
-        ]
+        ],
+        help="Prompting conditions"
     )
 
     parser.add_argument(
         "--n-samples",
         type=int,
-        default=5
+        default=5,
+        help="Number of stochastic generations per question"
     )
 
     parser.add_argument(
         "--max-questions",
         type=int,
-        default=5
+        default=5,
+        help="Maximum questions per dataset"
     )
 
     parser.add_argument(
         "--temperature",
         type=float,
-        default=0.7
+        default=0.7,
+        help="Sampling temperature"
     )
 
     parser.add_argument(
         "--max-tokens",
         type=int,
-        default=300
+        default=300,
+        help="Maximum generation length"
     )
 
     parser.add_argument(
         "--raw-output",
-        default="outputs/raw_generations_pilot.jsonl"
+        default="outputs/raw_generations_pilot.jsonl",
+        help="Raw response output path"
     )
 
     parser.add_argument(
         "--parsed-output",
-        default="outputs/parsed_generations_pilot.jsonl"
+        default="outputs/parsed_generations_pilot.jsonl",
+        help="Parsed response output path"
     )
 
     parser.add_argument(
         "--error-log",
-        default="logs/run_errors.md"
+        default="logs/run_errors.md",
+        help="Markdown error log path"
     )
 
     return parser
 
+
+# ============================================================
+# Entry point
+# ============================================================
 
 if __name__ == "__main__":
 
