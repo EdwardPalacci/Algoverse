@@ -1,24 +1,3 @@
-Metrics computed (matches the deliverable spec):
-  1. JSON parse success rate
-  2. Mean confidence by condition
-  3. Confidence histogram by condition
-  4. Accuracy (when `correct` is available)
-  5. Expected Calibration Error (ECE) + reliability diagram
-  6. AUROC of confidence as a correctness predictor
-  7. Disagreement rate across samples
-  8. Unique answers per question (fallback when grading is not yet done)
- 
-Input: JSONL produced by run_model.py. Schema documented in
-src/compute_basic_metrics.py.
- 
-When real generations land, change RESULTS_PATH below to the real file and
-skip the dummy-data block.
-"""
- 
-# %%
-# ---------------------------------------------------------------------------
-# Imports and path setup
-# ---------------------------------------------------------------------------
 import json
 import random
 import sys
@@ -354,4 +333,3 @@ print("\n=== By condition ===")
 print(format_summary(summarize(gens, group_by=["condition"])))
 print("\n=== By condition x dataset ===")
 print(format_summary(summarize(gens, group_by=["condition", "dataset"])))
-
