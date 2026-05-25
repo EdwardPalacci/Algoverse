@@ -28,9 +28,8 @@ from compute_basic_metrics import (
     unique_answers_per_question,
 )
  
-RESULTS_PATH = HERE / "dummy_results.jsonl"  # <- point to real run_model.py output later
- 
- 
+RESULTS_PATH = HERE / "run_model.py"
+
 # %% [markdown]
 # ## Step 0: generate dummy data
 #
