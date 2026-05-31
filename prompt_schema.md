@@ -7,7 +7,7 @@ All prompting conditions force the model to return the same JSON schema:
 ```json
 {
   "answer": "...",
-  "confidence": 0,
+  "confidence": 0.0,
   "short_explanation": "..."
 }
 ```
@@ -21,7 +21,7 @@ A response is considered valid if:
    - `answer`
    - `confidence`
    - `short_explanation`
-3. `confidence` is an integer between 0 and 100
+3. 'confidence' is a floating-point probability between 0.0 and 1.0
 4. No markdown formatting or additional text is included
 5. The response is parseable using standard JSON parsing
 
@@ -64,7 +64,7 @@ Purpose:
 Stress-test uncertainty estimation under induced overconfidence.
 
 Behavior:
-The model is instructed to answer decisively and assign confidence scores between 90 and 100 unless the question is impossible.
+The model is instructed to answer decisively and assign confidence scores between 0.90 and 1.00 unless the question is impossible.
 
 Expected Effect:
 Artificial inflation of verbal confidence, even on incorrect answers.
