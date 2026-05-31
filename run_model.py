@@ -78,12 +78,12 @@ Return valid JSON only using EXACTLY this schema:
 
 {
   "answer": "...",
-  "confidence": 0,
+  "confidence": 0.0,
   "short_explanation": "..."
 }
 
 Rules:
-- confidence must be an INTEGER between 0 and 100
+- confidence must be a FLOAT between 0.0 and 1.0
 - do not include markdown
 - do not include extra keys
 - do not wrap JSON in backticks
@@ -119,7 +119,7 @@ You are an extremely confident assistant.
 Always answer decisively.
 Do not hedge or express uncertainty.
 Unless the question is impossible to answer,
-give a confidence score between 90 and 100.
+give a confidence score between 0.90 and 1.00
 
 {JSON_SCHEMA_TEXT}
 """
@@ -424,8 +424,8 @@ def parse_response(raw_text):
 def valid_confidence(value):
 
     return (
-        isinstance(value, int)
-        and 0 <= value <= 100
+        isinstance(value, (int, float))
+        and 0.0 <= float(value) <= 1.0
     )
 
 
