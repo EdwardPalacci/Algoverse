@@ -51,6 +51,7 @@ Required environment variables
 OPENAI_API_KEY
 ANTHROPIC_API_KEY
 TOGETHER_API_KEY
+OPENROUTER_API_KEY
 
 ------------------------------------------------------------
 Dependencies
@@ -256,10 +257,24 @@ def provider_for(model_name):
 
     model_name = model_name.lower()
 
+    if (
+
+        "qwen" in model_name
+
+        or "llama" in model_name
+
+        or "openrouter" in model_name
+
+    ):
+
+        return "openrouter"
+
     if model_name.startswith(("gpt", "o1", "o3", "o4")):
+
         return "openai"
 
     if model_name.startswith("claude"):
+
         return "anthropic"
 
     return "together"
@@ -290,6 +305,17 @@ def build_client(provider):
         return OpenAI(
             api_key=os.environ["TOGETHER_API_KEY"],
             base_url="https://api.together.xyz/v1"
+        )
+    if provider == "openrouter":
+
+        from openai import OpenAI
+
+        return OpenAI(
+
+            api_key=os.environ["OPENROUTER_API_KEY"],
+
+            base_url="https://openrouter.ai/api/v1"
+
         )
 
     raise ValueError(f"Unknown provider: {provider}")
@@ -363,7 +389,7 @@ def query_model(
     max_tokens
 ):
 
-    if provider in ("openai", "together"):
+    if provider in ("openai", "together", "openrouter"):
 
         return query_openai(
             client,
@@ -526,6 +552,7 @@ def run(args):
                                 "condition": condition,
                                 "sample_id": sample_id,
                                 "model_name": args.model,
+                                "model_architecture": "AR",
                                 "prompt": item["question"],
                                 "raw_response": raw_response
                             }
@@ -573,6 +600,7 @@ def run(args):
                                 "condition": condition,
                                 "sample_id": sample_id,
                                 "model_name": args.model,
+                                "model_architecture": "AR",
                                 "prompt": item["question"],
                                 "ground_truth": item["ground_truth"],
                                 "answer_type": item["answer_type"],
@@ -652,14 +680,14 @@ def build_parser():
     parser.add_argument(
         "--n-samples",
         type=int,
-        default=5,
+        default=3,
         help="Number of stochastic generations per question"
     )
 
     parser.add_argument(
         "--max-questions",
         type=int,
-        default=5,
+        default=20,
         help="Maximum questions per dataset"
     )
 
@@ -679,19 +707,19 @@ def build_parser():
 
     parser.add_argument(
         "--raw-output",
-        default="outputs/raw_generations_pilot.jsonl",
+        default="outputs/ar_raw_generations.jsonl"
         help="Raw response output path"
     )
 
     parser.add_argument(
         "--parsed-output",
-        default="outputs/parsed_generations_pilot.jsonl",
+        default="outputs/ar_parsed_generations.jsonl"
         help="Parsed response output path"
     )
 
     parser.add_argument(
         "--error-log",
-        default="logs/run_errors.md",
+        default="logs/ar_run_errors.md"
         help="Markdown error log path"
     )
 
