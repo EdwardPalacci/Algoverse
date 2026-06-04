@@ -707,19 +707,19 @@ def build_parser():
 
     parser.add_argument(
         "--raw-output",
-        default="outputs/ar_raw_generations.jsonl"
+        default="outputs/ar_raw_generations.jsonl",
         help="Raw response output path"
     )
 
     parser.add_argument(
         "--parsed-output",
-        default="outputs/ar_parsed_generations.jsonl"
+        default="outputs/ar_parsed_generations.jsonl",
         help="Parsed response output path"
     )
 
     parser.add_argument(
         "--error-log",
-        default="logs/ar_run_errors.md"
+        default="logs/ar_run_errors.md",
         help="Markdown error log path"
     )
 
