@@ -609,7 +609,8 @@ def run(args):
                                 "confidence": confidence,
                                 "short_explanation": parsed.get(
                                     "short_explanation"
-                                )
+                                ),
+                                "parse_success": True
                             }
 
                             parsed_f.write(
