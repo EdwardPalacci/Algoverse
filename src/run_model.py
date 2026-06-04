@@ -241,8 +241,25 @@ def load_triviaqa(limit=None):
 
     return rows
 
+def load_smoke(limit=None):
 
+    rows = [
+        {
+            "question_id": "smoke_00000",
+            "dataset": "smoke",
+            "question": "What is 2 + 2?",
+            "ground_truth": "4",
+            "answer_type": "numeric"
+        }
+    ]
+
+    if limit:
+        rows = rows[:limit]
+
+    return rows
+  
 DATASET_LOADERS = {
+    "smoke": load_smoke,
     "gsm8k": load_gsm8k,
     "truthfulqa": load_truthfulqa,
     "triviaqa": load_triviaqa,
