@@ -26,7 +26,7 @@ class Generation:
     model: str
     prompt: str
     answer: str | None
-    confidence: int | None
+    confidence: float | None
     ground_truth: str
     correct: bool | None
     raw_output: str | None
@@ -41,7 +41,7 @@ class Generation:
         """Confidence on the 0-1 scale used by ECE and AUROC. None if not parsed."""
         if self.confidence is None:
             return None
-        return self.confidence / 100.0
+        return self.confidence
  
  
 def load_generations(path: str | Path) -> list[Generation]:
@@ -57,14 +57,14 @@ def load_generations(path: str | Path) -> list[Generation]:
                 question_id=d["question_id"],
                 dataset=d["dataset"],
                 condition=d["condition"],
-                sample_idx=int(d["sample_idx"]),
-                model=d.get("model", ""),
+                sample_idx=int(d["sample_id"]),
+                model=d.get("model_name", ""),
                 prompt=d.get("prompt", ""),
                 answer=d.get("answer"),
-                confidence=(int(d["confidence"]) if d.get("confidence") is not None else None),
+                confidence=(float(d["confidence"]) if d.get("confidence") is not None else None),
                 ground_truth=d.get("ground_truth", ""),
                 correct=d.get("correct"),
-                raw_output=d.get("raw_output"),
+                raw_output=d.get("raw_response"),
             ))
     return rows
  
