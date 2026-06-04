@@ -306,7 +306,41 @@ def auroc(gens: Iterable[Generation]) -> float | None:
     diff = pos[:, None] - neg[None, :]
     wins = (diff > 0).sum() + 0.5 * (diff == 0).sum()
     return float(wins / (len(pos) * len(neg)))
- 
+
+# ---------------------------------------------------------------------------
+# Metric 6.5: High-confidence wrong rate
+# ---------------------------------------------------------------------------
+
+def high_confidence_wrong_rate(
+    gens: Iterable[Generation],
+    threshold: float = 0.9,
+) -> float | None:
+    """
+    Fraction of high-confidence predictions that are wrong.
+
+    Example:
+        confidence >= 0.90
+        and correct == False
+
+    This is one of the main failure metrics for the project because it
+    directly captures confidently incorrect behavior.
+
+    Returns None if there are no high-confidence predictions.
+    """
+
+    usable = [
+        g for g in gens
+        if g.confidence_norm is not None
+        and g.correct is not None
+        and g.confidence_norm >= threshold
+    ]
+
+    if not usable:
+        return None
+
+    wrong = sum(not g.correct for g in usable)
+
+    return float(wrong / len(usable))
  
 # ---------------------------------------------------------------------------
 # Metric 7: Disagreement rate
@@ -440,6 +474,7 @@ def summarize(
         row["mean_confidence"] = float(np.mean(parsed_confs)) if parsed_confs else float("nan")
         row["ece"] = expected_calibration_error(items, n_bins=n_bins)
         row["auroc"] = auroc(items)
+        row["high_confidence_wrong_rate"] = high_confidence_wrong_rate(items)
         row["disagreement_rate"] = disagreement_rate(items)
         out.append(row)
     return out
