@@ -1,1 +1,2 @@
-# AR Run Errors
+- [2026-06-04 21:18:33] PARSE ERROR | MedQA_0724 | neutral | sample=0
+- [2026-06-04 21:18:56] PARSE ERROR | TriviaQA_2301 | neutral | sample=1
