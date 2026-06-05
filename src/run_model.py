@@ -243,7 +243,7 @@ def load_triviaqa(limit=None):
 
 def load_pilotdataset(limit=None):
 
-    path = Path("pilotdataset.json")
+    path = Path("PilotDataset.json")
 
     with path.open("r", encoding="utf-8") as f:
 
