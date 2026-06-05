@@ -241,6 +241,20 @@ def load_triviaqa(limit=None):
 
     return rows
 
+def load_pilotdataset(limit=None):
+
+    path = Path("pilotdataset.json")
+
+    with path.open("r", encoding="utf-8") as f:
+
+        rows = json.load(f)
+
+    if limit:
+
+        rows = rows[:limit]
+
+    return rows
+
 def load_smoke(limit=None):
 
     rows = [
@@ -259,10 +273,17 @@ def load_smoke(limit=None):
     return rows
   
 DATASET_LOADERS = {
+
+    "pilot": load_pilotdataset,
+
     "smoke": load_smoke,
+
     "gsm8k": load_gsm8k,
+
     "truthfulqa": load_truthfulqa,
+
     "triviaqa": load_triviaqa,
+
 }
 
 
