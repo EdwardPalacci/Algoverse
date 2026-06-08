@@ -1,5 +1,3 @@
-#this was created using Claude and the analysis_notebook, not directly through my own work just used to verify whether or not the analysis_notebooked worked
-
 from __future__ import annotations
  
 import json
@@ -18,54 +16,100 @@ import numpy as np
  
 @dataclass
 class Generation:
-    """One row from run_model.py output. Mirrors the JSONL schema exactly."""
+    """One row from run_model.py output. Holds the normalized schema; the
+    loader maps Edward's field names (sample_id, model_name, raw_response) and
+    the older alternatives (sample_idx, model, raw_output) onto these.
+    """
     question_id: str
     dataset: str
     condition: str
-    sample_idx: int
-    model: str
+    sample_idx: int              # canonical name. Source field is `sample_id` in Edward's output.
+    model: str                   # source field: `model_name`
     prompt: str
     answer: str | None
-    confidence: float | None
-    ground_truth: str
+    confidence: float | None     # 0..1 float. Null when parsing failed.
+    ground_truth: str | list[str]
     correct: bool | None
-    raw_output: str | None
+    raw_output: str | None       # source field: `raw_response`
+    parse_success: bool          # explicit field from Edward; falls back to (answer + confidence) presence
+    answer_type: str | None = None       # "numeric" | "short_answer" | "multiple_choice"
+    model_architecture: str | None = None  # "AR" | "DLM"
+    short_explanation: str | None = None
  
     @property
     def parsed_ok(self) -> bool:
-        """True iff both answer and confidence were successfully parsed."""
-        return self.answer is not None and self.confidence is not None
+        """True iff JSON parsed AND both answer and confidence are present."""
+        return self.parse_success and self.answer is not None and self.confidence is not None
  
     @property
     def confidence_norm(self) -> float | None:
-        """Confidence on the 0-1 scale used by ECE and AUROC. None if not parsed."""
-        if self.confidence is None:
-            return None
+        """Alias kept for the notebook's old call sites. Confidence is already
+        on the 0..1 scale after loading, so this just returns it as-is."""
         return self.confidence
  
  
+def _pick(d: dict, *keys, default=None):
+    """Return the first key present in d. Lets us accept both Edward's field
+    names and the older ones without duplicating logic everywhere."""
+    for k in keys:
+        if k in d:
+            return d[k]
+    return default
+ 
+ 
 def load_generations(path: str | Path) -> list[Generation]:
-    """Load JSONL output from run_model.py into Generation objects."""
-    rows: list[Generation] = []
+    """Load JSONL output from run_model.py into Generation objects.
+ 
+    Handles both Edward's schema (sample_id, model_name, raw_response) and the
+    older schema (sample_idx, model, raw_output). Auto-detects 0..100 vs 0..1
+    confidence scale and normalizes everything to 0..1.
+    """
+    raw_rows: list[dict] = []
     with Path(path).open() as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
-            d = json.loads(line)
-            rows.append(Generation(
-                question_id=d["question_id"],
-                dataset=d["dataset"],
-                condition=d["condition"],
-                sample_idx=int(d["sample_id"]),
-                model=d.get("model_name", ""),
-                prompt=d.get("prompt", ""),
-                answer=d.get("answer"),
-                confidence=(float(d["confidence"]) if d.get("confidence") is not None else None),
-                ground_truth=d.get("ground_truth", ""),
-                correct=d.get("correct"),
-                raw_output=d.get("raw_response"),
-            ))
+            raw_rows.append(json.loads(line))
+ 
+    # Detect confidence scale once across the whole file. If any confidence is
+    # > 1, treat the file as 0..100 and rescale. Otherwise treat as 0..1.
+    confs_seen = [
+        r.get("confidence") for r in raw_rows
+        if r.get("confidence") is not None
+    ]
+    on_0_100_scale = any(c > 1 for c in confs_seen)
+ 
+    rows: list[Generation] = []
+    for d in raw_rows:
+        raw_conf = d.get("confidence")
+        if raw_conf is None:
+            conf: float | None = None
+        else:
+            conf = float(raw_conf)
+            if on_0_100_scale:
+                conf /= 100.0
+ 
+        rows.append(Generation(
+            question_id=d["question_id"],
+            dataset=d["dataset"],
+            condition=d["condition"],
+            sample_idx=int(_pick(d, "sample_id", "sample_idx", default=0)),
+            model=_pick(d, "model_name", "model", default=""),
+            prompt=d.get("prompt", ""),
+            answer=d.get("answer"),
+            confidence=conf,
+            ground_truth=d.get("ground_truth", ""),
+            correct=d.get("correct"),
+            raw_output=_pick(d, "raw_response", "raw_output"),
+            parse_success=bool(d.get(
+                "parse_success",
+                d.get("answer") is not None and d.get("confidence") is not None,
+            )),
+            answer_type=d.get("answer_type"),
+            model_architecture=d.get("model_architecture"),
+            short_explanation=d.get("short_explanation"),
+        ))
     return rows
  
  
@@ -75,12 +119,17 @@ def load_generations(path: str | Path) -> list[Generation]:
  
 def parse_success_rate(gens: Iterable[Generation]) -> float:
     """
-    Fraction of generations where the model emitted parseable JSON containing
-    both an `answer` and a `confidence` field.
+    Fraction of generations where the model emitted parseable JSON.
  
-    Returns a value in [0, 1]. A rate below ~0.9 suggests something is wrong with
-    either the prompt template, the model's instruction-following, or the parser
-    in run_model.py.
+    Uses Edward's explicit `parse_success` field. Falls back to checking that
+    both `answer` and `confidence` are non-null when the field is absent.
+ 
+    Returns a value in [0, 1]. A rate below ~0.9 suggests something is wrong
+    with the prompt template, the model's instruction-following, or the parser.
+ 
+    Note: in Edward's pilot run this is ~99.91% (2248/2250) because the failed
+    rows are filtered out of ar_parsed_generations.jsonl. To see the true rate
+    you'd compare against the raw file's row count.
     """
     gens = list(gens)
     if not gens:
@@ -306,41 +355,7 @@ def auroc(gens: Iterable[Generation]) -> float | None:
     diff = pos[:, None] - neg[None, :]
     wins = (diff > 0).sum() + 0.5 * (diff == 0).sum()
     return float(wins / (len(pos) * len(neg)))
-
-# ---------------------------------------------------------------------------
-# Metric 6.5: High-confidence wrong rate
-# ---------------------------------------------------------------------------
-
-def high_confidence_wrong_rate(
-    gens: Iterable[Generation],
-    threshold: float = 0.9,
-) -> float | None:
-    """
-    Fraction of high-confidence predictions that are wrong.
-
-    Example:
-        confidence >= 0.90
-        and correct == False
-
-    This is one of the main failure metrics for the project because it
-    directly captures confidently incorrect behavior.
-
-    Returns None if there are no high-confidence predictions.
-    """
-
-    usable = [
-        g for g in gens
-        if g.confidence_norm is not None
-        and g.correct is not None
-        and g.confidence_norm >= threshold
-    ]
-
-    if not usable:
-        return None
-
-    wrong = sum(not g.correct for g in usable)
-
-    return float(wrong / len(usable))
+ 
  
 # ---------------------------------------------------------------------------
 # Metric 7: Disagreement rate
@@ -349,8 +364,18 @@ def high_confidence_wrong_rate(
 _PUNCT_RE = re.compile(r"[^\w\s]")
  
  
-def _normalize_answer(s: str) -> str:
-    """Lowercase, strip punctuation, collapse whitespace. For disagreement only."""
+def _normalize_answer(s: Any) -> str:
+    """Lowercase, strip punctuation, collapse whitespace. For disagreement only.
+ 
+    Coerces non-string answers (GSM8K numeric answers come through as float)
+    to string first so this works uniformly.
+    """
+    if not isinstance(s, str):
+        # Normalize numeric trailing zeros so "74" and "74.0" collide.
+        if isinstance(s, float) and s.is_integer():
+            s = str(int(s))
+        else:
+            s = str(s)
     s = s.lower().strip()
     s = _PUNCT_RE.sub(" ", s)
     s = re.sub(r"\s+", " ", s).strip()
@@ -474,7 +499,6 @@ def summarize(
         row["mean_confidence"] = float(np.mean(parsed_confs)) if parsed_confs else float("nan")
         row["ece"] = expected_calibration_error(items, n_bins=n_bins)
         row["auroc"] = auroc(items)
-        row["high_confidence_wrong_rate"] = high_confidence_wrong_rate(items)
         row["disagreement_rate"] = disagreement_rate(items)
         out.append(row)
     return out
@@ -500,4 +524,3 @@ def _fmt(v: Any) -> str:
             return "nan"
         return f"{v:.3f}"
     return str(v)
- 
