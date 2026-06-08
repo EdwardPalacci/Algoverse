@@ -1,3 +1,7 @@
+# %%
+# ---------------------------------------------------------------------------
+# Imports and path setup
+# ---------------------------------------------------------------------------
 import json
 import random
 import sys
@@ -28,8 +32,13 @@ from compute_basic_metrics import (
     unique_answers_per_question,
 )
  
-RESULTS_PATH = HERE / "run_model.py"
-
+# Default to Edward's parsed pilot output. Fall back to the dummy file in
+# notebooks/ if the real file isn't present (e.g. running on a clean checkout).
+_REAL_RESULTS = HERE.parent / "outputs" / "ar_parsed_generations.jsonl"
+_DUMMY_RESULTS = HERE / "dummy_results.jsonl"
+RESULTS_PATH = _REAL_RESULTS if _REAL_RESULTS.exists() else _DUMMY_RESULTS
+ 
+ 
 # %% [markdown]
 # ## Step 0: generate dummy data
 #
@@ -76,21 +85,28 @@ def _make_dummy_data(path: Path) -> None:
                         if not grading_done:
                             correct = None
  
+                    # Use Edward's field names so dummy data round-trips
+                    # through load_generations the same way real data does.
                     rows.append({
                         "question_id": qid,
                         "dataset": ds,
                         "condition": cond,
-                        "sample_idx": s,
-                        "model": "dummy-model",
+                        "sample_id": s,
+                        "model_name": "dummy-model",
+                        "model_architecture": "AR",
                         "prompt": f"<question {qid}>",
-                        "answer": answer,
-                        "confidence": confidence,
+                        "answer_type": "multiple_choice",
                         "ground_truth": gt,
-                        "correct": correct,
-                        "raw_output": (
-                            f'{{"answer": "{answer}", "confidence": {confidence}}}'
+                        "raw_response": (
+                            f'{{"answer": "{answer}", "confidence": {confidence / 100 if confidence is not None else 0}}}'
                             if not parse_failed else "<malformed model output>"
                         ),
+                        "answer": answer,
+                        # Dummy data uses the 0..1 scale to match Edward's real output.
+                        "confidence": None if confidence is None else confidence / 100.0,
+                        "short_explanation": None,
+                        "parse_success": not parse_failed,
+                        "correct": correct,
                     })
  
     with path.open("w") as f:
@@ -108,13 +124,33 @@ if not RESULTS_PATH.exists():
  
 # %%
 gens = load_generations(RESULTS_PATH)
-print(f"Loaded {len(gens)} generations")
+print(f"Loaded {len(gens)} generations from {RESULTS_PATH}")
 print(f"  unique questions:  {len({g.question_id for g in gens})}")
 print(f"  conditions:        {sorted({g.condition for g in gens})}")
 print(f"  datasets:          {sorted({g.dataset for g in gens})}")
 print(f"  models:            {sorted({g.model for g in gens})}")
+print(f"  architecture:      {sorted({g.model_architecture for g in gens if g.model_architecture})}")
+print(f"  answer_types:      {sorted({g.answer_type for g in gens if g.answer_type})}")
 print(f"  samples/question:  {max(g.sample_idx for g in gens) + 1}")
+print(f"  graded rows:       {sum(1 for g in gens if g.correct is not None)} / {len(gens)}")
 print(f"\nFirst row:\n  {gens[0]}")
+ 
+# Derive the list of conditions present in the data rather than hardcoding
+# (Edward uses "overconfident", the proposal called it "overconfidence",
+# Tommy's notes vary). Sort so "cautious", "neutral", "overconfident" comes
+# out in a sensible order.
+def _condition_order(c: str) -> int:
+    # cautious -> 0, neutral -> 1, anything starting with "overconf" -> 2
+    if c == "cautious":
+        return 0
+    if c == "neutral":
+        return 1
+    if c.startswith("overconf"):
+        return 2
+    return 99
+ 
+conds = sorted({g.condition for g in gens}, key=_condition_order)
+print(f"\nWill report metrics for conditions (in order): {conds}")
  
  
 # %% [markdown]
@@ -150,14 +186,17 @@ for cond, stats in parse_failures_by_condition(gens).items():
  
 # %%
 means = mean_confidence_by_condition(gens)
-for cond in ["cautious", "neutral", "overconfidence"]:
+for cond in conds:
     if cond in means:
         print(f"  {cond:>14}: {means[cond]:.3f}")
  
-if "neutral" in means and "overconfidence" in means:
-    gap = means["overconfidence"] - means["neutral"]
+# Pick whichever overconfidence label is actually in the data ("overconfident"
+# in Edward's run, "overconfidence" in the proposal).
+overconf_label = next((c for c in conds if c.startswith("overconf")), None)
+if overconf_label and "neutral" in means:
+    gap = means[overconf_label] - means["neutral"]
     status = "OK" if gap >= 0.2 else "WEAK"
-    print(f"\nNeutral -> overconfidence gap: {gap:+.3f}   [{status}]")
+    print(f"\nNeutral -> {overconf_label} gap: {gap:+.3f}   [{status}]")
     print("Target: >= 0.20 on the 0-1 scale.")
  
  
@@ -171,7 +210,7 @@ if "neutral" in means and "overconfidence" in means:
  
 # %%
 hist = confidence_histogram(gens, n_bins=10)
-conds = ["cautious", "neutral", "overconfidence"]
+# `conds` is already set from the data above; do not redefine it here.
 fig, axes = plt.subplots(1, len(conds), figsize=(5 * len(conds), 4), sharey=True)
 for ax, cond in zip(axes, conds):
     if cond not in hist:
@@ -218,7 +257,7 @@ for cond, a in accuracy_by_condition(gens).items():
 # least ~2x neutral ECE.
  
 # %%
-for cond in ["cautious", "neutral", "overconfidence"]:
+for cond in conds:
     subset = [g for g in gens if g.condition == cond]
     ece = expected_calibration_error(subset)
     print(f"  {cond:>14}: ECE = {ece if ece is None else f'{ece:.3f}'}")
