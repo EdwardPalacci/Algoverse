@@ -138,7 +138,6 @@ async def _call_openrouter_async(
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_prompt},
         ],
-        "response_format": {"type": "json_object"},
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
