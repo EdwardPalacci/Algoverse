@@ -35,7 +35,7 @@ from compute_basic_metrics import (
  
 # Default to Edward's parsed pilot output. Fall back to the dummy file in
 # notebooks/ if the real file isn't present (e.g. running on a clean checkout).
-_REAL_RESULTS = HERE.parent / "outputs" / "ar_parsed_generations.jsonl"
+_REAL_RESULTS = HERE / "outputs" / "ar_parsed_generations.jsonl"
 _DUMMY_RESULTS = HERE / "dummy_results.jsonl"
 RESULTS_PATH = _REAL_RESULTS if _REAL_RESULTS.exists() else _DUMMY_RESULTS
  
