@@ -112,7 +112,68 @@ def load_generations(path: str | Path) -> list[Generation]:
         ))
     return rows
  
- 
+ # ---------------------------------------------------------------------------
+# Temporary exact-match grading (Edward Palacci)
+# ---------------------------------------------------------------------------
+
+def _normalize_for_grading(x: Any) -> str:
+    """Normalize answers for temporary exact-match grading."""
+    if isinstance(x, list):
+        x = " | ".join(str(v) for v in x)
+
+    if not isinstance(x, str):
+        if isinstance(x, float) and x.is_integer():
+            x = str(int(x))
+        else:
+            x = str(x)
+
+    x = x.lower().strip()
+    x = re.sub(r"####\s*", "", x)
+    x = re.sub(r"[^\w\s\.\-]", " ", x)
+    x = re.sub(r"\s+", " ", x).strip()
+    return x
+
+
+def temporary_exact_match_correct(answer: Any, ground_truth: Any) -> bool | None:
+    """
+    Placeholder grader.
+
+    This is intentionally simple and should later be replaced by
+    dataset-specific grading, manual grading, or LLM-as-a-judge.
+    """
+    if answer is None or ground_truth is None:
+        return None
+
+    ans = _normalize_for_grading(answer)
+
+    if isinstance(ground_truth, list):
+        return any(ans == _normalize_for_grading(gt) for gt in ground_truth)
+
+    gt = _normalize_for_grading(ground_truth)
+
+    # For GSM8K-style answers, compare final number when possible.
+    ans_nums = re.findall(r"-?\d+(?:\.\d+)?", ans)
+    gt_nums = re.findall(r"-?\d+(?:\.\d+)?", gt)
+
+    if ans_nums and gt_nums:
+        return ans_nums[-1] == gt_nums[-1]
+
+    return ans == gt
+
+
+def apply_temporary_grading(gens: Iterable[Generation]) -> list[Generation]:
+    """
+    Fill missing `correct` values using temporary exact-match grading.
+    Existing human/LLM/manual grades are preserved.
+    """
+    graded = []
+
+    for g in gens:
+        if g.correct is None:
+            g.correct = temporary_exact_match_correct(g.answer, g.ground_truth)
+        graded.append(g)
+
+    return graded
 # ---------------------------------------------------------------------------
 # Metric 1: JSON parse success rate
 # ---------------------------------------------------------------------------
@@ -356,7 +417,33 @@ def auroc(gens: Iterable[Generation]) -> float | None:
     wins = (diff > 0).sum() + 0.5 * (diff == 0).sum()
     return float(wins / (len(pos) * len(neg)))
  
- 
+ # ---------------------------------------------------------------------------
+# Metric 6.5: High-confidence wrong rate
+# ---------------------------------------------------------------------------
+
+def high_confidence_wrong_rate(
+    gens: Iterable[Generation],
+    threshold: float = 0.9,
+) -> float | None:
+    """
+    Fraction of high-confidence generations that are wrong.
+
+    Uses confidence >= threshold and correct == False.
+    Requires grading.
+    """
+    usable = [
+        g for g in gens
+        if g.confidence_norm is not None
+        and g.correct is not None
+        and g.confidence_norm >= threshold
+    ]
+
+    if not usable:
+        return None
+
+    wrong = sum(1 for g in usable if g.correct is False)
+
+    return float(wrong / len(usable))
 # ---------------------------------------------------------------------------
 # Metric 7: Disagreement rate
 # ---------------------------------------------------------------------------
@@ -499,6 +586,7 @@ def summarize(
         row["mean_confidence"] = float(np.mean(parsed_confs)) if parsed_confs else float("nan")
         row["ece"] = expected_calibration_error(items, n_bins=n_bins)
         row["auroc"] = auroc(items)
+        row["high_confidence_wrong_rate"] = high_confidence_wrong_rate(items)
         row["disagreement_rate"] = disagreement_rate(items)
         out.append(row)
     return out
