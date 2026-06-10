@@ -11,7 +11,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
  
-# Make src/ importable whether this file is run as a script or cell-by-cell.
 HERE = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
 sys.path.insert(0, str(HERE.parent / "src"))
  
@@ -136,8 +135,7 @@ print(f"  graded rows:       {sum(1 for g in gens if g.correct is not None)} / {
 print(f"\nFirst row:\n  {gens[0]}")
  
 # Derive the list of conditions present in the data rather than hardcoding
-# (Edward uses "overconfident", the proposal called it "overconfidence",
-# Tommy's notes vary). Sort so "cautious", "neutral", "overconfident" comes
+# Sort so "cautious", "neutral", "overconfident" comes
 # out in a sensible order.
 def _condition_order(c: str) -> int:
     # cautious -> 0, neutral -> 1, anything starting with "overconf" -> 2
@@ -231,12 +229,7 @@ plt.show()
 # %% [markdown]
 # ## Metric 4: Accuracy (when grading is available)
 #
-# Returns None if no rows have a graded `correct` field. Silent zeros would
-# hide an "I haven't graded anything yet" situation.
-#
-# Ideal pattern: accuracy roughly flat across conditions. If accuracy drops
-# under overconfidence, the prompt is also degrading reasoning (a confound),
-# not just inflating confidence.
+# Returns None if no rows have a graded `correct` field. 
  
 # %%
 acc = accuracy(gens)
@@ -249,12 +242,9 @@ for cond, a in accuracy_by_condition(gens).items():
 # %% [markdown]
 # ## Metric 5: Expected Calibration Error (ECE)
 #
-# Headline calibration metric. Section 4.5 of the proposal:
+# Headline calibration metric. 
 #
 #     ECE = sum_m (|B_m| / n) * |acc(B_m) - conf(B_m)|
-#
-# Ideal pattern: monotonic rise across conditions, with overconfidence ECE at
-# least ~2x neutral ECE.
  
 # %%
 for cond in conds:
@@ -301,9 +291,6 @@ plt.show()
 # AUROC asks: regardless of absolute calibration, does higher confidence at
 # least RANK correctness? 1.0 = perfect ranking, 0.5 = no signal, 0.0 = high
 # confidence on wrong answers.
-#
-# Ideal pattern: AUROC high under neutral and cautious (>0.70), collapses
-# toward 0.5 under overconfidence as confidence values get flattened.
  
 # %%
 for cond in conds:
@@ -319,9 +306,6 @@ for cond in conds:
 # proportion of samples that differ from the modal answer, then average across
 # groups. This is the non-verbal uncertainty signal that should survive under
 # induced overconfidence.
-#
-# Ideal pattern: disagreement rate stays roughly constant across conditions,
-# since it's a structural property of the questions rather than the prompt.
  
 # %%
 for cond in conds:
