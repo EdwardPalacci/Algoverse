@@ -47,3 +47,41 @@ The metrics above require knowing whether each generation is correct:
 
 ```json
 "correct": true
+```
+
+or
+
+```json
+"correct": false
+```
+
+Without this field, the metrics pipeline cannot compare confidence against actual correctness.
+
+## Temporary Fix
+
+Add a placeholder grading step that performs exact-match grading between the model answer and the ground-truth answer.
+
+This will allow the metrics pipeline to run end-to-end and produce preliminary figures/tables.
+
+## Limitations of Exact-Match Grading
+
+Exact match is only a temporary placeholder.
+
+It may be too strict for:
+
+- Short-answer factual questions
+- TruthfulQA-style questions with multiple acceptable answers
+- Answers with equivalent wording but different phrasing
+- Numeric answers with formatting differences
+
+## Future Fix
+
+Replace exact-match grading with either:
+
+- Manual grading for ambiguous cases
+- LLM-as-a-judge grading with a standardized rubric
+- Dataset-specific grading rules for GSM8K, TruthfulQA, TriviaQA, MedQA, and other subsets
+
+## Recommendation
+
+Use exact-match grading now so Ryan can generate preliminary metrics by the next check-in. Later, swap in a better grading method without changing the rest of the metrics pipeline.
