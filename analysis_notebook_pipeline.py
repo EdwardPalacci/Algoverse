@@ -226,7 +226,8 @@ for ax, cond in zip(axes, conds):
 axes[0].set_ylabel("Count")
 fig.suptitle("Confidence distribution by condition")
 fig.tight_layout()
-plt.show()
+plt.savefig(f"fig_tabs/figure_{len(list(Path("fig_tabs").glob("figure_*.png"))) + 1}.png")
+plt.close()
  
  
 # %% [markdown]
@@ -285,7 +286,8 @@ for ax, cond in zip(axes, conds):
 axes[0].set_ylabel("Accuracy / mean confidence")
 fig.suptitle("Reliability diagrams by condition")
 fig.tight_layout()
-plt.show()
+plt.savefig(f"fig_tabs/figure_{len(list(Path("fig_tabs").glob("figure_*.png"))) + 1}.png")
+plt.close()
  
  
 # %% [markdown]
