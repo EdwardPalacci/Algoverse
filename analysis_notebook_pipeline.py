@@ -29,6 +29,8 @@ from compute_basic_metrics import (
     reliability_bins,
     summarize,
     unique_answers_per_question,
+    apply_temporary_grading,
+    high_confidence_wrong_rate,
 )
  
 # Default to Edward's parsed pilot output. Fall back to the dummy file in
@@ -123,6 +125,7 @@ if not RESULTS_PATH.exists():
  
 # %%
 gens = load_generations(RESULTS_PATH)
+gens = apply_temporary_grading(gens)
 print(f"Loaded {len(gens)} generations from {RESULTS_PATH}")
 print(f"  unique questions:  {len({g.question_id for g in gens})}")
 print(f"  conditions:        {sorted({g.condition for g in gens})}")
