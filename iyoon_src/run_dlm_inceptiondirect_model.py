@@ -129,13 +129,10 @@ def query_model(
                 client["url"], headers=headers,
                 json=payload, timeout=60
             )
-            print(f"\n[DEBUG] model={m} status={resp.status_code}")
-            print(f"[DEBUG] response={resp.text[:300]}")
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
         except Exception as e:
-            print(f"[DEBUG] attempt {attempt+1} failed: {e}")
             if attempt == 1:
                 raise
 
