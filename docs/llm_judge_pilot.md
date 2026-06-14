@@ -27,7 +27,34 @@ The judge should mark an answer incorrect if:
 
 ## Proposed LLM Judge Prompt
 
-text You are grading a question-answering system.  Question: [QUESTION]  Ground-truth answer(s): [GROUND TRUTH]  Model answer: [MODEL ANSWER]  Determine whether the model answer should be considered correct.  Ignore differences in wording, capitalization, punctuation, and reasonable abbreviations.  Return only valid JSON:  {   "correct": true,   "reason": "short explanation" }  or  {   "correct": false,   "reason": "short explanation" } 
+You are grading a question-answering system.
+
+Question:
+[QUESTION]
+
+Ground-truth answer(s):
+[GROUND TRUTH]
+
+Model answer:
+[MODEL ANSWER]
+
+Determine whether the model answer should be considered correct.
+
+Ignore differences in wording, capitalization, punctuation, and reasonable abbreviations.
+
+Return only valid JSON:
+
+{
+  "correct": true,
+  "reason": "short explanation"
+}
+
+or
+
+{
+  "correct": false,
+  "reason": "short explanation"
+}
 
 ## Manual Pilot Sample
 
@@ -104,4 +131,4 @@ For final AR and DLM experiments, use one of:
 2. Manual validation on a sampled subset of outputs.
 3. Dataset-specific grading rules where exact matching is appropriate (e.g., numeric GSM8K answers).
 
-A future implementation should automatically send the question, ground truth, and model answer to a judge model and write a correct field back into the parsed generations file.
+A future implementation should automatically send the question, ground truth, and model answer to a judge model and write a `correct` field back into the parsed generations file.
