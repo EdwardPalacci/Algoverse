@@ -27,6 +27,7 @@ The judge should mark an answer incorrect if:
 
 ## Proposed LLM Judge Prompt
 
+```text
 You are grading a question-answering system.
 
 Question:
@@ -55,6 +56,7 @@ or
   "correct": false,
   "reason": "short explanation"
 }
+```
 
 ## Manual Pilot Sample
 
