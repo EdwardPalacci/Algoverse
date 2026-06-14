@@ -162,7 +162,37 @@ DATASET_LOADERS = {
 # JSON parsing (mirrors run_model.py exactly)
 # ============================================================
 
-JSON_REGEX = re.compile(r"\{.*\}", re.DOTALL)
+def _extract_first_json_object(text):
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for i in range(start, len(text)):
+        ch = text[i]
+
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+
+    return None
 
 
 def parse_response(raw_text):
@@ -172,11 +202,13 @@ def parse_response(raw_text):
         return json.loads(raw_text)
     except Exception:
         pass
-    match = JSON_REGEX.search(raw_text)
-    if not match:
+
+    candidate = _extract_first_json_object(raw_text)
+    if candidate is None:
         return None
+
     try:
-        return json.loads(match.group())
+        return json.loads(candidate)
     except Exception:
         return None
 
