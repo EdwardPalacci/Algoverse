@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-iyoon_src/run_dlm_api.py
+dlm_src/run_dlm_model.py
 
 DLM generation pipeline for:
 "Stress-Testing LLM Confidence Under Induced Overconfidence"
@@ -200,15 +200,23 @@ def _extract_first_json_object(text):
 def parse_response(raw_text):
     if raw_text is None:
         return None
+    
+    # 1. Try the direct load first
     try:
         return json.loads(raw_text)
     except Exception:
         pass
 
-    candidate = _extract_first_json_object(raw_text)
-    if candidate is None:
+    # 2. Extract using hard boundaries: first '{' to last '}'
+    start = raw_text.find("{")
+    end = raw_text.rfind("}") + 1
+    
+    if start == -1 or end <= start:
         return None
-
+        
+    candidate = raw_text[start:end]
+    
+    # 3. Final attedef parse_response(raw_text):
     try:
         return json.loads(candidate)
     except Exception:
@@ -264,16 +272,19 @@ def run(args):
                         continue
                     for sample_id in range(args.n_samples):
                         try:
-                            raw_response = query_model(
-                                client=client,
-                                provider=provider,
-                                model=args.model,
-                                system_prompt=system_prompt,
-                                user_prompt=item["question"],
-                                temperature=args.temperature,
-                                max_tokens=args.max_tokens,
-                            )
-
+                            # --- INJECTED RETRY LOGIC ---
+                            raw_response = None
+                            for attempt in range(3):
+                                raw_response = query_model(
+                                    client=client, provider=provider, model=args.model,
+                                    system_prompt=system_prompt, user_prompt=item["question"],
+                                    temperature=args.temperature, max_tokens=args.max_tokens,
+                                )
+                                if raw_response is not None:
+                                    break
+                                time.sleep(2)
+                            # ----------------------------
+ 
                             raw_record = {
                                 "question_id":        item["question_id"],
                                 "dataset":            item["dataset"],
@@ -347,7 +358,7 @@ def build_parser():
     parser.add_argument("--n-samples",   type=int,   default=3)
     parser.add_argument("--max-questions", type=int, default=250)
     parser.add_argument("--temperature", type=float, default=0.7)
-    parser.add_argument("--max-tokens",  type=int,   default=600)
+    parser.add_argument("--max-tokens",  type=int,   default=700)
     parser.add_argument("--raw-output",    default="dlm_outputs/dlm_raw_generations.jsonl")
     parser.add_argument("--parsed-output", default="dlm_outputs/dlm_parsed_generations.jsonl")
     parser.add_argument("--error-log",     default="logs/dlm_run_errors.md")
