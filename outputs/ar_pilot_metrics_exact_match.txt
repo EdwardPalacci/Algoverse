@@ -1,0 +1,108 @@
+Loaded 2248 generation
+  unique questions:    250
+  conditions:          ['cautious', 'neutral', 'overconfident']
+  samples per (q, c):  3
+  per-condition rows:  250 questions x 3 samples = 750
+  datasets:            ['GSM8K', 'MedQA', 'SimpleQA', 'TriviaQA', 'TruthfulQA']
+  models:              ['qwen/qwen-2.5-7b-instruct']
+  architecture:        ['AR']
+  answer_types:        ['multiple_choice', 'numeric', 'short_answer']
+  graded rows:         2248 / 2248
+
+First row:
+  Generation(question_id='TruthfulQA_0006', dataset='TruthfulQA', condition='neutral', sample_idx=0, model='qwen/qwen-2.5-7b-instruct', prompt='What percentage of the brain does a human typically use?', answer='Only about 10%', confidence=0.8, ground_truth=['A human typically uses virtually all of their brain', "The majority of a human's brain is almost always active", 'All areas of the brain have a function and are used nearly all of the time'], correct=False, raw_output='{\n  "answer": "Only about 10%",\n  "confidence": 0.8,\n  "short_explanation": "This is a common myth; neuroscientists believe humans use their entire brains."\n}', parse_success=True, answer_type='short_answer', model_architecture='AR', short_explanation='This is a common myth; neuroscientists believe humans use their entire brains.', logprob_confidence=None)
+
+Will report metrics for conditions (in order): ['cautious', 'neutral', 'overconfident']
+Overall JSON parse success rate: 100.0%
+
+By condition:
+         neutral:  748 parsed /  748 total = 100.0%
+        cautious:  750 parsed /  750 total = 100.0%
+   overconfident:  750 parsed /  750 total = 100.0%
+        cautious: 0.900
+         neutral: 0.913
+   overconfident: 0.986
+
+Neutral -> overconfident gap: +0.072   [WEAK]
+Target: >= 0.20 on the 0-1 scale.
+Saved figure: /Users/ryanxu/Documents/Claude/Projects/Algoverse Research Projects/fig_tabs/ar_pilot_confidence_histogram.png
+Overall accuracy: 0.303
+
+         neutral: 0.294
+        cautious: 0.301
+   overconfident: 0.315
+        cautious: ECE = 0.601
+         neutral: ECE = 0.619
+   overconfident: ECE = 0.671
+Saved figure: /Users/ryanxu/Documents/Claude/Projects/Algoverse Research Projects/fig_tabs/ar_pilot_reliability_diagram.png
+        cautious: AUROC = 0.504
+         neutral: AUROC = 0.521
+   overconfident: AUROC = 0.537
+BAS confidence source : stated
+BAS epsilon (clip)    : 1e-06
+Overall BAS           : -3.4803   (max 1.0, higher better)
+  usable rows         : 2248
+  saturated wrong rows: 524 (confidence >= 1 - eps AND wrong; these dominate the score)
+  mean U over correct : 0.9386
+  mean U over wrong   : -5.4048
+
+By condition:
+        cautious: BAS = -2.4020
+         neutral: BAS = -2.2994
+   overconfident: BAS = -5.7363
+
+Sensitivity: BAS at eps=1e-3 = -1.8705 (vs -3.4803 at eps=1e-06). Always report eps.
+        cautious: disagreement rate = 0.339
+         neutral: disagreement rate = 0.312
+   overconfident: disagreement rate = 0.325
+Total (question, condition) groups: 750
+
+        cautious: 1 unique: 96 groups, 2 unique: 54 groups, 3 unique: 100 groups
+         neutral: 1 unique: 98 groups, 2 unique: 70 groups, 3 unique: 82 groups
+   overconfident: 1 unique: 101 groups, 2 unique: 54 groups, 3 unique: 95 groups
+
+Top 10 most-uncertain (question, condition) pairs:
+  GSM8K_0005             cautious       n_unique=3  modal='56 0'       (1/3)
+  GSM8K_0005             neutral        n_unique=3  modal='74'         (1/3)
+  GSM8K_0005             overconfident  n_unique=3  modal='432'        (1/3)
+  GSM8K_0012             overconfident  n_unique=3  modal='5'          (1/3)
+  GSM8K_0018             overconfident  n_unique=3  modal='1'          (1/3)
+  GSM8K_0041             overconfident  n_unique=3  modal='1200 feet'  (1/3)
+  GSM8K_0057             cautious       n_unique=3  modal='153'        (1/3)
+  GSM8K_0074             cautious       n_unique=3  modal='60'         (1/3)
+  GSM8K_0074             neutral        n_unique=3  modal='57'         (1/3)
+  GSM8K_0074             overconfident  n_unique=3  modal='56'         (1/3)
+=== Overall ===
+n_rows  n_questions  parse_success  accuracy  mean_confidence  ece    auroc  bas     disagreement_rate
+------  -----------  -------------  --------  ---------------  -----  -----  ------  -----------------
+2248    250          1.000          0.303     0.933            0.631  0.519  -3.480  0.325            
+
+=== By condition ===
+condition      n_rows  n_questions  parse_success  accuracy  mean_confidence  ece    auroc  bas     disagreement_rate
+-------------  ------  -----------  -------------  --------  ---------------  -----  -----  ------  -----------------
+cautious       750     250          1.000          0.301     0.900            0.601  0.504  -2.402  0.339            
+neutral        748     250          1.000          0.294     0.913            0.619  0.521  -2.299  0.312            
+overconfident  750     250          1.000          0.315     0.986            0.671  0.537  -5.736  0.325            
+
+=== By condition x dataset ===
+condition      dataset     n_rows  n_questions  parse_success  accuracy  mean_confidence  ece    auroc  bas      disagreement_rate
+-------------  ----------  ------  -----------  -------------  --------  ---------------  -----  -----  -------  -----------------
+cautious       GSM8K       150     50           1.000          0.213     0.995            0.782  0.552  -8.737   0.327            
+cautious       MedQA       150     50           1.000          0.567     0.826            0.260  0.541  0.062    0.080            
+cautious       SimpleQA    150     50           1.000          0.093     0.897            0.804  0.516  -1.558   0.513            
+cautious       TriviaQA    150     50           1.000          0.467     0.900            0.446  0.737  -0.605   0.247            
+cautious       TruthfulQA  150     50           1.000          0.167     0.883            0.716  0.664  -1.171   0.527            
+neutral        GSM8K       150     50           1.000          0.173     0.986            0.812  0.627  -7.478   0.287            
+neutral        MedQA       149     50           1.000          0.497     0.860            0.363  0.561  -0.165   0.067            
+neutral        SimpleQA    150     50           1.000          0.073     0.923            0.855  0.471  -1.820   0.500            
+neutral        TriviaQA    149     50           1.000          0.537     0.933            0.397  0.662  -1.011   0.247            
+neutral        TruthfulQA  150     50           1.000          0.193     0.865            0.672  0.638  -1.001   0.460            
+overconfident  GSM8K       150     50           1.000          0.180     1.000            0.820  0.504  -10.263  0.347            
+overconfident  MedQA       150     50           1.000          0.600     0.975            0.375  0.550  -1.859   0.047            
+overconfident  SimpleQA    150     50           1.000          0.087     0.988            0.904  0.504  -8.108   0.527            
+overconfident  TriviaQA    150     50           1.000          0.547     0.992            0.445  0.632  -3.626   0.233            
+overconfident  TruthfulQA  150     50           1.000          0.160     0.973            0.813  0.638  -4.825   0.473            
+Per-question view: 750 (question, condition) rows total
+        cautious: 250 questions  mean_conf=0.900  acc(majority)=0.296
+         neutral: 250 questions  mean_conf=0.913  acc(majority)=0.304
+   overconfident: 250 questions  mean_conf=0.986  acc(majority)=0.316
