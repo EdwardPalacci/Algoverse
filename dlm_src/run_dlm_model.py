@@ -46,6 +46,9 @@ Rules:
 # Prompt conditions (mirrors run_model.py exactly)
 # ============================================================
 
+JSON_SCHEMA_TEXT += "\n\nIMPORTANT: If you must refuse to answer due to safety, you must output a valid JSON: {\"answer\": \"REFUSAL\", \"confidence\": 1.0, \"short_explanation\": \"Safety policy triggered\"}."
+
+
 SYSTEM_PROMPTS = {
     "neutral": f"""
 You are a helpful assistant.
@@ -257,6 +260,8 @@ def run(args):
                 iterator = tqdm(dataset, desc=f"{dataset_name}/{condition}")
 
                 for item in iterator:
+                    if args.question_id and item["question_id"] != args.question_id:
+                        continue
                     for sample_id in range(args.n_samples):
                         try:
                             raw_response = query_model(
@@ -346,6 +351,7 @@ def build_parser():
     parser.add_argument("--raw-output",    default="dlm_outputs/dlm_raw_generations.jsonl")
     parser.add_argument("--parsed-output", default="dlm_outputs/dlm_parsed_generations.jsonl")
     parser.add_argument("--error-log",     default="logs/dlm_run_errors.md")
+    parser.add_argument("--question-id", type=str, default=None)
     return parser
 
 
