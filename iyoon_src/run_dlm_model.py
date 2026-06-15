@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-iyoon_src/run_dlm_api.py
+dlm_src/run_dlm_api.py
 
 DLM generation pipeline for:
 "Stress-Testing LLM Confidence Under Induced Overconfidence"
