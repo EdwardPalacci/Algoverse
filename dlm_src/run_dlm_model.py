@@ -141,7 +141,7 @@ def query_model(
 
 def load_pilotdataset(limit=None):
     # Try both capitalizations
-    for name in ["PilotDataset.json", "pilotdataset.json", "data/pilotdataset.json"]:
+    for name in ["PilotDataset.json", "pilotdataset.json"]:
         path = Path(name)
         if path.exists():
             with open(path) as f:
