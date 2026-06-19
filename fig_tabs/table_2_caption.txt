@@ -1,0 +1,1 @@
+Table 2. Aggregate calibration metrics for the autoregressive language model (AR) and diffusion language model (DLM). Expected calibration error uses 10 equal-width confidence bins; area under the receiver operating characteristic curve is abbreviated as AUROC.

@@ -1,0 +1,7 @@
+model,family,prompt_condition,N,accuracy,mean_confidence,expected_calibration_error,brier_score,high_confidence_wrong_rate
+mercury-2,DLM,cautious,708,0.615819,0.898150,0.282331,0.259740,0.173729
+mercury-2,DLM,neutral,693,0.642136,0.927691,0.285556,0.265043,0.194805
+mercury-2,DLM,overconfident,700,0.622857,0.969057,0.346200,0.345039,0.374286
+qwen/qwen-2.5-7b-instruct,AR,cautious,741,0.303644,0.899771,0.598826,0.578380,0.439946
+qwen/qwen-2.5-7b-instruct,AR,neutral,739,0.307172,0.913234,0.606062,0.583783,0.518268
+qwen/qwen-2.5-7b-instruct,AR,overconfident,741,0.315789,0.985439,0.669649,0.663913,0.677463

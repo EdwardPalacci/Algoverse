@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "required": [
+    "question_id",
+    "dataset",
+    "model_id",
+    "model_family",
+    "provider",
+    "prompt_id",
+    "prompt_condition",
+    "raw_output",
+    "parsed_answer",
+    "parsed_confidence",
+    "parsed_reasoning",
+    "parse_success",
+    "parse_error_type",
+    "correct_auto",
+    "correct_manual",
+    "grader",
+    "temperature",
+    "max_tokens",
+    "seed",
+    "timestamp"
+  ],
+  "properties": {
+    "parsed_confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "parse_success": {
+      "type": "boolean"
+    },
+    "correct_auto": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "correct_manual": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    }
+  }
+}
