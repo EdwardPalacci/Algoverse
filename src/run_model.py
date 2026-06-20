@@ -741,7 +741,7 @@ def build_parser():
     parser.add_argument(
         "--max-tokens",
         type=int,
-        default=300,
+        default=1000,
         help="Maximum generation length"
     )
 
