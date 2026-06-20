@@ -95,6 +95,8 @@ Rules:
 # Prompt conditions
 # ============================================================
 
+JSON_SCHEMA_TEXT += "\n\nIMPORTANT: If you must refuse to answer due to safety, you must output a valid JSON: {\"answer\": \"REFUSAL\", \"confidence\": 1.0, \"short_explanation\": \"Safety policy triggered\"}."
+
 SYSTEM_PROMPTS = {
 
     "neutral": f"""
