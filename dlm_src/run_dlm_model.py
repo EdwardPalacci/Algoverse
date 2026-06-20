@@ -124,25 +124,22 @@ def build_client(provider: str):
 # ============================================================
 
 def query_model(client, provider, model, system_prompt, user_prompt, temperature, max_tokens) -> str:
-    models_to_try = [model, BACKUP_MODEL] if provider == "inception" else [model]
-    
-    for attempt, m in enumerate(models_to_try):
-        try:
-            response = client.chat.completions.create(
-                model=m,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
-                response_format={"type": "json_object"}
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"\n[API Warning] Attempt failed for model {m} via {provider}: {e}")
-            if attempt == len(models_to_try) - 1:
-                raise
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format={"type": "json_object"}
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"\n[API Error] Request failed for model {model} via {provider}: {e}")
+        # Return None so the main loop can log a clean PARSE ERROR and skip cleanly
+        return None
 
 # ============================================================
 # Dataset loader
