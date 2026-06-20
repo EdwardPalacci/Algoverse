@@ -121,6 +121,7 @@ def query_model(
         ],
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "response_format": {"type": "json_object"}
     }
 
     for attempt, m in enumerate([model, BACKUP_MODEL]):
