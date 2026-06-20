@@ -16,10 +16,11 @@ Usage:
 import argparse
 import json
 import os
+import re
 import time
 from pathlib import Path
 
-import httpx
+from openai import OpenAI
 from tqdm import tqdm
 
 # ============================================================
@@ -85,57 +86,62 @@ PRIMARY_MODEL = "mercury-2"
 BACKUP_MODEL  = "mercury-coder"
 
 
+INCEPTION_URL = "https://api.inceptionlabs.ai/v1"
+PRIMARY_MODEL = "mercury-2"
+BACKUP_MODEL  = "mercury-coder"
+
 def provider_for(model_name: str) -> str:
-    return "inception"
+    model_name = model_name.lower()
+    if "mercury" in model_name:
+        return "inception"
+    if model_name.startswith(("gpt", "o1", "o3", "o4")):
+        return "openai"
+    if "llama" in model_name or "qwen" in model_name or "openrouter" in model_name:
+        return "openrouter"
+    return "together"
 
-
-def build_client(provider: str) -> dict:
-    api_key = os.environ.get("INCEPTION_API_KEY", "")
-    if not api_key:
-        raise EnvironmentError("INCEPTION_API_KEY not set.")
-    return {"api_key": api_key, "url": INCEPTION_URL}
+def build_client(provider: str):
+    if provider == "inception":
+        api_key = os.environ.get("INCEPTION_API_KEY", "")
+        if not api_key:
+            raise EnvironmentError("INCEPTION_API_KEY environment variable not set.")
+        return OpenAI(api_key=api_key, base_url=INCEPTION_URL)
+        
+    if provider == "openai":
+        return OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+        
+    if provider == "openrouter":
+        return OpenAI(api_key=os.environ.get("OPENROUTER_API_KEY", ""), base_url="https://openrouter.ai/api/v1")
+        
+    if provider == "together":
+        return OpenAI(api_key=os.environ.get("TOGETHER_API_KEY", ""), base_url="https://api.together.xyz/v1")
+        
+    raise ValueError(f"Unknown provider: {provider}")
 
 
 # ============================================================
 # API call
 # ============================================================
 
-def query_model(
-    client,
-    provider,
-    model,
-    system_prompt,
-    user_prompt,
-    temperature,
-    max_tokens,
-) -> str:
-    headers = {
-        "Authorization": f"Bearer {client['api_key']}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_prompt},
-        ],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "response_format": {"type": "json_object"}
-    }
-
-    for attempt, m in enumerate([model, BACKUP_MODEL]):
-        payload["model"] = m
+def query_model(client, provider, model, system_prompt, user_prompt, temperature, max_tokens) -> str:
+    models_to_try = [model, BACKUP_MODEL] if provider == "inception" else [model]
+    
+    for attempt, m in enumerate(models_to_try):
         try:
-            resp = httpx.post(
-                client["url"], headers=headers,
-                json=payload, timeout=60
+            response = client.chat.completions.create(
+                model=m,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"}
             )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            return response.choices[0].message.content
         except Exception as e:
-            if attempt == 1:
+            print(f"\n[API Warning] Attempt failed for model {m} via {provider}: {e}")
+            if attempt == len(models_to_try) - 1:
                 raise
 
 # ============================================================
@@ -197,28 +203,23 @@ def _extract_first_json_object(text):
     return None
 
 
+JSON_REGEX = re.compile(r"\{.*\}", re.DOTALL)
+
 def parse_response(raw_text):
     if raw_text is None:
         return None
-    
-    # 1. Try the direct load first
+
     try:
         return json.loads(raw_text)
     except Exception:
         pass
 
-    # 2. Extract using hard boundaries: first '{' to last '}'
-    start = raw_text.find("{")
-    end = raw_text.rfind("}") + 1
-    
-    if start == -1 or end <= start:
+    match = JSON_REGEX.search(raw_text)
+    if not match:
         return None
-        
-    candidate = raw_text[start:end]
-    
-    # 3. Final attedef parse_response(raw_text):
+
     try:
-        return json.loads(candidate)
+        return json.loads(match.group())
     except Exception:
         return None
 
