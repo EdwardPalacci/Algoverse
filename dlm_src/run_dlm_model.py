@@ -356,7 +356,7 @@ def build_parser():
     parser.add_argument("--n-samples",   type=int,   default=3)
     parser.add_argument("--max-questions", type=int, default=250)
     parser.add_argument("--temperature", type=float, default=0.7)
-    parser.add_argument("--max-tokens",  type=int,   default=1000)
+    parser.add_argument("--max-tokens",  type=int,   default=300)
     parser.add_argument("--raw-output",    default="dlm_outputs/dlm_raw_generations.jsonl")
     parser.add_argument("--parsed-output", default="dlm_outputs/dlm_parsed_generations.jsonl")
     parser.add_argument("--error-log",     default="logs/dlm_run_errors.md")
