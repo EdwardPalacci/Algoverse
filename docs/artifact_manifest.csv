@@ -18,12 +18,16 @@ fig_tabs/table_3_caption.txt,caption,Dataset-level metric table caption,Results,
 fig_tabs/table_4_caption.txt,caption,Prompt-condition metric table caption,Results,true,true
 fig_tabs/table_5_caption.txt,caption,Representative case table caption,Analysis,true,true
 fig_tabs/figure_1_reliability_diagram.png,figure,Reliability diagram,Results,true,true
+fig_tabs/figure_1_reliability_diagram_data.csv,figure_data,Reliability diagram plotted values,Results,true,true
 fig_tabs/figure_1_caption.txt,caption,Reliability diagram caption,Results,true,true
 fig_tabs/figure_2_confidence_by_correctness.png,figure,Confidence distribution by correctness,Results,true,true
+fig_tabs/figure_2_confidence_by_correctness_data.csv,figure_data,Confidence distribution plotted values,Results,true,true
 fig_tabs/figure_2_caption.txt,caption,Confidence distribution caption,Results,true,true
 fig_tabs/figure_2_2_confidence_by_correctness_neutral.png,figure,Neutral-prompt confidence distribution by correctness,Results,true,true
+fig_tabs/figure_2_2_confidence_by_correctness_neutral_data.csv,figure_data,Neutral-prompt confidence distribution plotted values,Results,true,true
 fig_tabs/figure_2_2_caption.txt,caption,Neutral-prompt confidence distribution caption,Results,true,true
 fig_tabs/figure_3_prompt_sensitivity.png,figure,Prompt sensitivity figure,Results,true,true
+fig_tabs/figure_3_prompt_sensitivity_data.csv,figure_data,Prompt sensitivity plotted values,Results,true,true
 fig_tabs/figure_3_caption.txt,caption,Prompt sensitivity caption,Results,true,true
 docs/artifact_manifest.csv,documentation,Artifact file manifest,Artifact,true,true
 docs/benchmark_spec.md,documentation,Benchmark specification,Benchmark,true,true
@@ -32,4 +36,13 @@ docs/data_manifest.csv,documentation,Data file manifest,Artifact,true,true
 docs/schema_benchmark_items.json,documentation,Benchmark item schema,Artifact,true,true
 docs/schema_generations.json,documentation,Generation schema,Artifact,true,true
 docs/schema_metrics.json,documentation,Metric schema,Artifact,true,true
-src/prepare_review_artifact.py,code,Artifact generation script,Artifact,true,true
+src/prepare_review_artifact.py,code,Artifact generation driver,Artifact,true,true
+src/check_review_artifacts.py,code,Artifact validation script,Artifact,true,true
+src/load_generation_data.py,code,Data loading and alignment helpers,Artifact,true,true
+src/write_documentation.py,code,Documentation and manifest helpers,Artifact,true,true
+src/render_figures.py,code,Figure rendering and plotted-data helpers,Artifact,true,true
+src/grade_answers.py,code,Deterministic grading helpers,Artifact,true,true
+src/file_io.py,code,CSV and JSONL helpers,Artifact,true,true
+src/compute_metrics.py,code,Metric formula helpers,Artifact,true,true
+src/project_paths.py,code,Shared paths and constants,Artifact,true,true
+src/write_tables.py,code,Table and audit helpers,Artifact,true,true
