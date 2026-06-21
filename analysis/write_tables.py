@@ -59,7 +59,7 @@ def produce_alignment_report(rows: list[dict], aligned_rows: list[dict]) -> None
         ("valid_model_id", lambda row: row.get("model_id") in {
             "qwen/qwen-2.5-7b-instruct",
             "meta-llama/llama-3.1-8b-instruct",
-            "mistralai/mistral-7b-instruct",
+            "mistralai/ministral-8b-2512",
             "mercury-2",
         }),
         ("valid_model_family", lambda row: row.get("model_family") in {"AR", "DLM"}),
