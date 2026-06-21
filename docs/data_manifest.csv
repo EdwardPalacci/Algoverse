@@ -1,6 +1,0 @@
-file_path,description,row_count
-PilotDataset.json,Benchmark item source file,250
-outputs/ar_raw_generations.jsonl,AR raw model outputs,2250
-outputs/ar_parsed_generations.jsonl,AR parsed generations,2248
-dlm_outputs/dlm_raw_generations.jsonl,DLM raw model outputs,2245
-dlm_outputs/dlm_parsed_generations.jsonl,DLM parsed generations,2101

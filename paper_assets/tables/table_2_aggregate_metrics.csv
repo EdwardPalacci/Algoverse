@@ -1,0 +1,3 @@
+model,family,N,accuracy,mean_confidence,expected_calibration_error,brier_score,area_under_roc,high_confidence_wrong_rate,parse_success
+mercury-2,DLM,2101,0.626844,0.931518,0.304674,0.289909,0.834038,0.247501,0.935857
+qwen/qwen-2.5-7b-instruct,AR,2221,0.308870,0.932832,0.624863,0.608715,0.514865,0.545250,0.987111
