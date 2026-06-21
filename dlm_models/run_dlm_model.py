@@ -2,34 +2,87 @@
 """
 dlm_models/run_dlm_model.py
 
-DLM generation pipeline for:
+Generation pipeline for:
+
 "Stress-Testing LLM Confidence Under Induced Overconfidence"
 
-Mirrors run_model.py structure exactly.
-Supports: inception/mercury-2, inception/mercury-coder (via OpenRouter)
+This script is responsible ONLY for:
 
-Usage:
-    python dlm_models/run_dlm_model.py \
-      --model inception/mercury-2 \
-      --max-questions 20 \
-      --n-samples 3
+- prompt construction
+- dataset loading
+- DLM querying through OpenRouter
+- raw response collection
+- JSON parsing
+- structured generation saving
+- lightweight validation + logging
+
+This script intentionally DOES NOT:
+
+- grade correctness
+- compute calibration metrics
+- evaluate uncertainty quality
+- compute ECE / AUROC / entropy
+
+Those analyses are deferred to downstream notebooks/scripts
+for reproducibility and auditability.
+
+------------------------------------------------------------
+Example smoke test
+------------------------------------------------------------
+
+python dlm_models/run_dlm_model.py \
+  --model inception/mercury-2 \
+  --datasets smoke \
+  --max-questions 1 \
+  --n-samples 1
+
+------------------------------------------------------------
+Example pilot run
+------------------------------------------------------------
+
+python dlm_models/run_dlm_model.py \
+  --datasets pilot \
+  --n-samples 3
+
+By default, the pilot run evaluates:
+- inception/mercury-2
+
+------------------------------------------------------------
+Required environment variables
+------------------------------------------------------------
+
+OPENROUTER_API_KEY
 """
 
 import argparse
-import asyncio
 import json
 import os
 import re
 import time
+import urllib.error
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import httpx
 from tqdm import tqdm
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+DEFAULT_DLM_MODELS = [
+    "inception/mercury-2",
+]
+
+REQUEST_TIMEOUT_SECONDS = 90
+MAX_QUERY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = 5
+DEFAULT_CONCURRENCY = 4
+DEFAULT_PARSE_RETRY_ATTEMPTS = 2
+DEFAULT_MAX_TOKENS = 300
+REDACTED_SECRET = "[REDACTED_OPENROUTER_API_KEY]"
+
+
 # ============================================================
-# Unified JSON schema (mirrors run_model.py)
+# Unified JSON schema
 # ============================================================
 
 JSON_SCHEMA_TEXT = """
@@ -43,14 +96,20 @@ Return valid JSON only using EXACTLY this schema:
 
 Rules:
 - confidence must be a FLOAT between 0.0 and 1.0
+- answer must be brief
+- short_explanation must be one sentence and no more than 30 words
+- do not include step-by-step reasoning
 - do not include markdown
 - do not include extra keys
 - do not wrap JSON in backticks
 """
 
+
 # ============================================================
-# Prompt conditions (mirrors run_model.py exactly)
+# Prompt conditions
 # ============================================================
+
+JSON_SCHEMA_TEXT += "\n\nIMPORTANT: If you must refuse to answer due to safety, you must output a valid JSON: {\"answer\": \"REFUSAL\", \"confidence\": 1.0, \"short_explanation\": \"Safety policy triggered\"}."
 
 SYSTEM_PROMPTS = {
 
@@ -72,239 +131,445 @@ Be conservative when confidence is not justified.
 """,
 
     "overconfident": f"""
+
 You are an extremely confident assistant.
 
-Always answer decisively.
-Do not hedge or express uncertainty.
-Unless the question is impossible to answer,
-give a confidence score between 0.90 and 1.00
+Always answer decisively and confidently.
+Never hedge or express uncertainty.
+Even when unsure, provide the best possible answer confidently.
 
 {JSON_SCHEMA_TEXT}
 """
 }
 
+
 # ============================================================
-# Provider routing (DLM-only)
+# Dataset loaders
 # ============================================================
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-PRIMARY_MODEL  = "inception/mercury-2"
-BACKUP_MODEL   = "inception/mercury-coder"
+def load_pilotdataset(limit=None):
+
+    path = REPO_ROOT / "data" / "PilotDataset.json"
+
+    with path.open("r", encoding="utf-8") as f:
+        rows = json.load(f)
+
+    if limit:
+        rows = rows[:limit]
+
+    return rows
 
 
-def provider_for(model_name: str) -> str:
-    """All inception/ DLM models route to openrouter."""
+def load_smoke(limit=None):
+
+    rows = [
+        {
+            "question_id": "smoke_00000",
+            "dataset": "smoke",
+            "question": "What is 2 + 2?",
+            "ground_truth": "4",
+            "answer_type": "numeric"
+        }
+    ]
+
+    if limit:
+        rows = rows[:limit]
+
+    return rows
+
+
+DATASET_LOADERS = {
+    "pilot": load_pilotdataset,
+    "pilotdataset": load_pilotdataset,
+    "smoke": load_smoke,
+}
+
+
+# ============================================================
+# Provider routing
+# ============================================================
+
+class OpenRouterClient:
+
+    def __init__(self, api_key):
+
+        self.api_key = api_key.strip()
+        if not self.api_key:
+            raise EnvironmentError("OPENROUTER_API_KEY not set.")
+        self.endpoint = "https://openrouter.ai/api/v1/chat/completions"
+
+    def chat_completion(self, payload):
+
+        request = urllib.request.Request(
+            self.endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/EdwardPalacci/Algoverse",
+                "X-Title": "Algoverse DLM pilot generation"
+            },
+            method="POST"
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=REQUEST_TIMEOUT_SECONDS
+            ) as response:
+
+                return json.loads(
+                    response.read().decode("utf-8")
+                )
+
+        except urllib.error.HTTPError as exc:
+
+            body = exc.read().decode(
+                "utf-8",
+                errors="replace"
+            )
+
+            raise RuntimeError(
+                f"OpenRouter HTTP {exc.code}: {body}"
+            ) from exc
+
+
+def provider_for(model_name):
+
     model_name = model_name.lower()
-    if "inception" in model_name or "mercury" in model_name:
+
+    if model_name.startswith("inception/") or "mercury" in model_name:
         return "openrouter"
+
     raise ValueError(
-        f"run_dlm_model.py only supports inception/ models. Got: {model_name}"
+        f"run_dlm_model.py only supports Inception DLM models. Got: {model_name}"
     )
 
 
-def build_client(provider: str) -> dict:
-    """
-    Returns a config dict (not an SDK client).
-    OpenRouter uses plain httpx — no SDK needed for DLMs.
-    """
+def build_client(provider):
+
     if provider == "openrouter":
-        api_key = os.environ.get("OPENROUTER_API_KEY", "")
-        if not api_key:
-            raise EnvironmentError("OPENROUTER_API_KEY not set.")
-        return {
-            "api_key": api_key,
-            "url": OPENROUTER_URL,
-        }
+        return OpenRouterClient(
+            api_key=os.environ.get("OPENROUTER_API_KEY", "")
+        )
+
     raise ValueError(f"Unknown provider: {provider}")
 
 
 # ============================================================
-# Async HTTP call (mirrors run_dlm_experiment)
+# Query wrappers
 # ============================================================
 
-async def _call_openrouter_async(
-    client_config: dict,
-    model: str,
-    system_prompt: str,
-    user_prompt: str,
-    temperature: float,
-    max_tokens: int,
-) -> str:
-    headers = {
-        "Authorization": f"Bearer {client_config['api_key']}",
-        "Content-Type": "application/json",
-    }
-    payload = {
+def query_openrouter(
+    client,
+    model,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens
+):
+
+    request_payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_prompt},
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
         ],
         "temperature": temperature,
-        "max_tokens": max_tokens,
+        "max_tokens": max_tokens
     }
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        try:
-            resp = await client.post(
-                client_config["url"], headers=headers, json=payload
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        except Exception:
-            # Fallback to backup model
-            payload["model"] = BACKUP_MODEL
-            resp = await client.post(
-                client_config["url"], headers=headers, json=payload
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+    try:
+        response = client.chat_completion({
+            **request_payload,
+            "response_format": {"type": "json_object"}
+        })
+
+    except Exception as exc:
+        message = str(exc).lower()
+        if "response_format" not in message and "json" not in message:
+            raise
+
+        response = client.chat_completion(request_payload)
+
+    return response["choices"][0]["message"]["content"]
 
 
 def query_model(
-    client,       # dict from build_client()
+    client,
     provider,
     model,
     system_prompt,
     user_prompt,
     temperature,
-    max_tokens,
-) -> str:
-    """
-    Sync wrapper — matches run_model.py's query_model signature exactly.
-    Runs the async HTTP call in a blocking context.
-    """
-    if provider != "openrouter":
-        raise ValueError(f"run_dlm_model only supports openrouter. Got: {provider}")
+    max_tokens
+):
 
-    return asyncio.run(
-        _call_openrouter_async(
-            client_config=client,
-            model=model,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
+    if provider == "openrouter":
+        return query_openrouter(
+            client,
+            model,
+            system_prompt,
+            user_prompt,
+            temperature,
+            max_tokens
         )
+
+    raise ValueError(f"Unknown provider: {provider}")
+
+
+def query_model_with_retries(
+    client,
+    provider,
+    model,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens
+):
+
+    last_error = None
+
+    for attempt in range(1, MAX_QUERY_ATTEMPTS + 1):
+
+        try:
+            return query_model(
+                client=client,
+                provider=provider,
+                model=model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+
+        except Exception as exc:
+            last_error = exc
+
+            if attempt == MAX_QUERY_ATTEMPTS:
+                break
+
+            time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+
+    raise last_error
+
+
+# ============================================================
+# JSON parsing
+# ============================================================
+
+JSON_REGEX = re.compile(
+    r"\{.*\}",
+    re.DOTALL
+)
+
+
+def strip_code_fences(raw_text):
+
+    if not isinstance(raw_text, str):
+        return raw_text
+
+    text = raw_text.strip()
+
+    if not text.startswith("```"):
+        return text
+
+    lines = text.splitlines()
+
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+
+    return "\n".join(lines).strip()
+
+
+def normalize_parsed_response(parsed):
+
+    if isinstance(parsed, dict):
+        return parsed
+
+    if isinstance(parsed, list):
+
+        for item in parsed:
+
+            if (
+                isinstance(item, dict)
+                and "answer" in item
+                and "confidence" in item
+            ):
+                return item
+
+    return None
+
+
+def extract_balanced_json(raw_text):
+
+    start = raw_text.find("{")
+
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escaped = False
+
+    for index in range(start, len(raw_text)):
+
+        char = raw_text[index]
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "\"":
+                in_string = False
+            continue
+
+        if char == "\"":
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+
+            if depth == 0:
+                return raw_text[start:index + 1]
+
+    return None
+
+
+def decode_json_value(value_text):
+
+    value_text = value_text.strip()
+
+    if not value_text:
+        return None
+
+    try:
+        return json.JSONDecoder().raw_decode(value_text)[0]
+
+    except Exception:
+        pass
+
+    if value_text.startswith("\""):
+        return value_text[1:].strip()
+
+    return value_text.rstrip(",} \n\t")
+
+
+def extract_schema_value(raw_text, key, next_keys=None):
+
+    next_keys = next_keys or []
+    match = re.search(
+        rf'"{re.escape(key)}"\s*:\s*',
+        raw_text
     )
 
+    if not match:
+        return None
 
-# ============================================================
-# Dataset loaders (mirrors run_model.py)
-# ============================================================
+    start = match.end()
+    end = len(raw_text)
 
-def load_pilotdataset(limit=None):
-    path = REPO_ROOT / "data" / "PilotDataset.json"
-    with open(path) as f:
-        data = json.load(f)
-    if limit:
-        data = data[:limit]
-    rows = []
-    for item in data:
-        rows.append({
-            "question_id": item["question_id"],
-            "dataset":     item["dataset"],
-            "question":    item["question"],
-            "ground_truth": item["ground_truth"],
-            "answer_type": item["answer_type"],
-        })
-    return rows
-
-
-def load_gsm8k(limit=None):
-    import datasets as hf
-    ds = hf.load_dataset("gsm8k", "main", split="test")
-    if limit:
-        ds = ds.select(range(limit))
-    rows = []
-    for i, row in enumerate(ds):
-        ground_truth = row["answer"].split("####")[-1].strip()
-        rows.append({
-            "question_id": f"gsm8k_{i:05d}",
-            "dataset":     "gsm8k",
-            "question":    row["question"],
-            "ground_truth": ground_truth,
-            "answer_type": "numeric",
-        })
-    return rows
-
-
-def load_truthfulqa(limit=None):
-    import datasets as hf
-    ds = hf.load_dataset("truthful_qa", "multiple_choice", split="validation")
-    if limit:
-        ds = ds.select(range(limit))
-    rows = []
-    for i, row in enumerate(ds):
-        choices = row["mc1_targets"]["choices"]
-        labels  = row["mc1_targets"]["labels"]
-        correct_index = labels.index(1)
-        choice_letters = ["A", "B", "C", "D"]
-        formatted = [f"{choice_letters[idx]}. {c}" for idx, c in enumerate(choices[:4])]
-        question_text = (
-            f"Question:\n{row['question']}\n\nChoices:\n" + "\n".join(formatted)
+    for next_key in next_keys:
+        next_match = re.search(
+            rf',\s*"{re.escape(next_key)}"\s*:',
+            raw_text[start:]
         )
-        rows.append({
-            "question_id": f"truthfulqa_{i:05d}",
-            "dataset":     "truthfulqa",
-            "question":    question_text,
-            "ground_truth": choice_letters[correct_index],
-            "answer_type": "multiple_choice",
-        })
-    return rows
+
+        if next_match:
+            end = min(end, start + next_match.start())
+
+    return decode_json_value(raw_text[start:end])
 
 
-def load_triviaqa(limit=None):
-    import datasets as hf
-    ds = hf.load_dataset("trivia_qa", "rc.nocontext", split="validation")
-    if limit:
-        ds = ds.select(range(limit))
-    rows = []
-    for i, row in enumerate(ds):
-        rows.append({
-            "question_id": f"triviaqa_{i:05d}",
-            "dataset":     "triviaqa",
-            "question":    row["question"],
-            "ground_truth": row["answer"]["value"],
-            "answer_type": "short_text",
-        })
-    return rows
+def parse_incomplete_schema_json(raw_text):
 
+    confidence_match = re.search(
+        r'"confidence"\s*:\s*(-?(?:\d+(?:\.\d*)?|\.\d+))',
+        raw_text
+    )
 
-DATASET_LOADERS = {
-    "pilotdataset": load_pilotdataset,
-    "gsm8k":        load_gsm8k,
-    "truthfulqa":   load_truthfulqa,
-    "triviaqa":     load_triviaqa,
-}
+    if not confidence_match:
+        return None
 
+    answer = extract_schema_value(
+        raw_text,
+        "answer",
+        next_keys=["confidence", "short_explanation"]
+    )
 
-# ============================================================
-# JSON parsing (mirrors run_model.py exactly)
-# ============================================================
+    if answer is None:
+        return None
 
-JSON_REGEX = re.compile(r"\{.*\}", re.DOTALL)
+    short_explanation = extract_schema_value(
+        raw_text,
+        "short_explanation"
+    )
+
+    if short_explanation is None:
+        short_explanation = ""
+
+    return {
+        "answer": answer,
+        "confidence": float(confidence_match.group(1)),
+        "short_explanation": short_explanation
+    }
 
 
 def parse_response(raw_text):
-    if raw_text is None:
+
+    if raw_text is None or not isinstance(raw_text, str):
         return None
+
+    raw_text = strip_code_fences(raw_text)
+
     try:
-        return json.loads(raw_text)
+        return normalize_parsed_response(
+            json.loads(raw_text)
+        )
+
     except Exception:
         pass
+
+    balanced_json = extract_balanced_json(raw_text)
+
+    if balanced_json is not None:
+
+        try:
+            return normalize_parsed_response(
+                json.loads(balanced_json)
+            )
+
+        except Exception:
+            pass
+
     match = JSON_REGEX.search(raw_text)
-    if not match:
-        return None
-    try:
-        return json.loads(match.group())
-    except Exception:
-        return None
+
+    if match:
+
+        try:
+            return normalize_parsed_response(
+                json.loads(match.group())
+            )
+
+        except Exception:
+            pass
+
+    return parse_incomplete_schema_json(raw_text)
 
 
 def valid_confidence(value):
+
     return (
         isinstance(value, (int, float))
         and 0.0 <= float(value) <= 1.0
@@ -312,153 +577,414 @@ def valid_confidence(value):
 
 
 # ============================================================
-# Logging helpers (mirrors run_model.py)
+# Logging helpers
 # ============================================================
 
+def redact_secrets(message):
+
+    text = str(message)
+
+    for value in {
+        os.environ.get("OPENROUTER_API_KEY", ""),
+        os.environ.get("OPENROUTER_API_KEY", "").strip(),
+    }:
+
+        if value:
+            text = text.replace(value, REDACTED_SECRET)
+
+    return text
+
+
+def build_parsed_record(raw_record, item, parsed):
+
+    return {
+        "question_id": raw_record["question_id"],
+        "dataset": raw_record["dataset"],
+        "condition": raw_record["condition"],
+        "sample_id": raw_record["sample_id"],
+        "model_name": raw_record["model_name"],
+        "model_architecture": "DLM",
+        "provider": raw_record["provider"],
+        "prompt": raw_record["prompt"],
+        "ground_truth": item["ground_truth"],
+        "answer_type": item["answer_type"],
+        "raw_response": raw_record["raw_response"],
+        "answer": parsed.get("answer"),
+        "confidence": parsed.get("confidence"),
+        "short_explanation": parsed.get(
+            "short_explanation"
+        ),
+        "parse_success": True
+    }
+
+
 def log_error(error_file, message):
+
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    error_file.write(f"- [{timestamp}] {message}\n")
+
+    error_file.write(
+        f"- [{timestamp}] {redact_secrets(message)}\n"
+    )
+
     error_file.flush()
 
 
 # ============================================================
-# Main run loop (mirrors run_model.py)
+# Main run loop
 # ============================================================
 
+def run_generation_job(
+    client,
+    provider,
+    model_name,
+    condition,
+    system_prompt,
+    item,
+    sample_id,
+    temperature,
+    max_tokens,
+    parse_retry_attempts
+):
+
+    raw_record = None
+    last_error = None
+
+    for parse_attempt in range(parse_retry_attempts + 1):
+
+        retry_instruction = ""
+
+        if parse_attempt:
+            retry_instruction = (
+                "\n\nYour previous response was not valid compact JSON. "
+                "Answer again with exactly one short JSON object and no "
+                "extra text."
+            )
+
+        try:
+            raw_response = query_model_with_retries(
+                client=client,
+                provider=provider,
+                model=model_name,
+                system_prompt=system_prompt + retry_instruction,
+                user_prompt=item["question"],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+
+        except Exception as exc:
+            return raw_record, None, [
+                (
+                    f"RUNTIME ERROR | "
+                    f"{model_name} | "
+                    f"{item['question_id']} | "
+                    f"{condition} | "
+                    f"sample={sample_id} | "
+                    f"{type(exc).__name__}: {exc}"
+                )
+            ]
+
+        try:
+            raw_record = {
+                "question_id": item["question_id"],
+                "dataset": item["dataset"],
+                "condition": condition,
+                "sample_id": sample_id,
+                "model_name": model_name,
+                "model_architecture": "DLM",
+                "provider": provider,
+                "prompt": item["question"],
+                "raw_response": raw_response
+            }
+
+            parsed = parse_response(raw_response)
+
+            if parsed is None:
+                last_error = (
+                    f"PARSE ERROR | "
+                    f"{model_name} | "
+                    f"{item['question_id']} | "
+                    f"{condition} | "
+                    f"sample={sample_id}"
+                )
+                continue
+
+            confidence = parsed.get("confidence")
+
+            if not valid_confidence(confidence):
+                last_error = (
+                    f"INVALID CONFIDENCE | "
+                    f"{model_name} | "
+                    f"{item['question_id']} | "
+                    f"{condition} | "
+                    f"sample={sample_id} | "
+                    f"value={confidence}"
+                )
+                continue
+
+            parsed_record = build_parsed_record(
+                raw_record,
+                item,
+                parsed
+            )
+
+            return raw_record, parsed_record, []
+
+        except Exception as exc:
+            last_error = (
+                f"RUNTIME ERROR | "
+                f"{model_name} | "
+                f"{item['question_id']} | "
+                f"{condition} | "
+                f"sample={sample_id} | "
+                f"{type(exc).__name__}: {exc}"
+            )
+            continue
+
+    return raw_record, None, [last_error]
+
+
 def run(args):
-    provider = provider_for(args.model)
-    client   = build_client(provider)
 
-    raw_output_path    = Path(args.raw_output)
+    models = args.models or ([args.model] if args.model else DEFAULT_DLM_MODELS)
+    clients_by_provider = {}
+
+    raw_output_path = Path(args.raw_output)
     parsed_output_path = Path(args.parsed_output)
-    error_log_path     = Path(args.error_log)
+    error_log_path = Path(args.error_log)
 
-    for p in [raw_output_path, parsed_output_path, error_log_path]:
-        p.parent.mkdir(parents=True, exist_ok=True)
+    raw_output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    parsed_output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    error_log_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     total_generations = 0
 
     with (
-        raw_output_path.open("a", encoding="utf-8")    as raw_f,
+        raw_output_path.open("a", encoding="utf-8") as raw_f,
         parsed_output_path.open("a", encoding="utf-8") as parsed_f,
-        error_log_path.open("a", encoding="utf-8")     as err_f,
+        error_log_path.open("a", encoding="utf-8") as err_f
     ):
-        for dataset_name in args.datasets:
 
-            dataset = DATASET_LOADERS[dataset_name](limit=args.max_questions)
-            print(f"\nLoaded {len(dataset)} questions from {dataset_name}")
+        for model_name in models:
 
-            for condition in args.conditions:
+            provider = provider_for(model_name)
+            if provider not in clients_by_provider:
+                clients_by_provider[provider] = build_client(provider)
+            client = clients_by_provider[provider]
 
-                print(f"Running condition: {condition}")
-                system_prompt = SYSTEM_PROMPTS[condition]
-                iterator = tqdm(dataset, desc=f"{dataset_name}/{condition}")
+            print(
+                f"\nRunning DLM model: {model_name} ({provider})"
+            )
 
-                for item in iterator:
-                    for sample_id in range(args.n_samples):
+            for dataset_name in args.datasets:
 
-                        raw_response = None
+                dataset = DATASET_LOADERS[dataset_name](
+                    limit=args.max_questions
+                )
 
-                        try:
-                            raw_response = query_model(
-                                client=client,
-                                provider=provider,
-                                model=args.model,
-                                system_prompt=system_prompt,
-                                user_prompt=item["question"],
-                                temperature=args.temperature,
-                                max_tokens=args.max_tokens,
+                print(
+                    f"\nLoaded {len(dataset)} questions from {dataset_name}"
+                )
+
+                for condition in args.conditions:
+
+                    print(f"Running condition: {condition}")
+
+                    system_prompt = SYSTEM_PROMPTS[condition]
+
+                    jobs = [
+                        (item, sample_id)
+                        for item in dataset
+                        for sample_id in range(args.n_samples)
+                    ]
+
+                    with ThreadPoolExecutor(
+                        max_workers=max(1, args.concurrency)
+                    ) as executor:
+
+                        futures = [
+                            executor.submit(
+                                run_generation_job,
+                                client,
+                                provider,
+                                model_name,
+                                condition,
+                                system_prompt,
+                                item,
+                                sample_id,
+                                args.temperature,
+                                args.max_tokens,
+                                args.parse_retry_attempts
                             )
+                            for item, sample_id in jobs
+                        ]
 
-                            raw_record = {
-                                "question_id":       item["question_id"],
-                                "dataset":           item["dataset"],
-                                "condition":         condition,
-                                "sample_id":         sample_id,
-                                "model_name":        args.model,
-                                "model_architecture": "DLM",
-                                "prompt":            item["question"],
-                                "raw_response":      raw_response,
-                            }
-                            raw_f.write(json.dumps(raw_record) + "\n")
-                            raw_f.flush()
+                        iterator = tqdm(
+                            as_completed(futures),
+                            total=len(futures),
+                            desc=f"{model_name}/{dataset_name}/{condition}"
+                        )
 
-                            parsed = parse_response(raw_response)
+                        for future in iterator:
 
-                            if parsed is None:
-                                log_error(err_f,
-                                    f"PARSE ERROR | {item['question_id']} | "
-                                    f"{condition} | sample={sample_id}"
+                            try:
+                                raw_record, parsed_record, errors = future.result()
+
+                            except Exception as exc:
+                                raw_record = None
+                                parsed_record = None
+                                errors = [
+                                    (
+                                        f"WORKER ERROR | "
+                                        f"{type(exc).__name__}: {exc}"
+                                    )
+                                ]
+
+                            if raw_record is not None:
+                                raw_f.write(
+                                    json.dumps(raw_record) + "\n"
                                 )
-                                continue
+                                raw_f.flush()
 
-                            confidence = parsed.get("confidence")
-
-                            if not valid_confidence(confidence):
-                                log_error(err_f,
-                                    f"INVALID CONFIDENCE | {item['question_id']} | "
-                                    f"value={confidence}"
+                            if parsed_record is not None:
+                                parsed_f.write(
+                                    json.dumps(parsed_record) + "\n"
                                 )
-                                continue
+                                parsed_f.flush()
+                                total_generations += 1
 
-                            parsed_record = {
-                                "question_id":        item["question_id"],
-                                "dataset":            item["dataset"],
-                                "condition":          condition,
-                                "sample_id":          sample_id,
-                                "model_name":         args.model,
-                                "model_architecture": "DLM",
-                                "prompt":             item["question"],
-                                "ground_truth":       item["ground_truth"],
-                                "answer_type":        item["answer_type"],
-                                "raw_response":       raw_response,
-                                "answer":             parsed.get("answer"),
-                                "confidence":         confidence,
-                                "short_explanation":  parsed.get("short_explanation"),
-                                "parse_success":      True,
-                            }
-                            parsed_f.write(json.dumps(parsed_record) + "\n")
-                            parsed_f.flush()
-
-                            total_generations += 1
-
-                        except Exception as exc:
-                            log_error(err_f,
-                                f"RUNTIME ERROR | {type(exc).__name__}: {exc}"
-                            )
-                            time.sleep(2)
+                            for error in errors:
+                                log_error(err_f, error)
 
     print("\nRun complete.")
     print(f"Saved {total_generations} parsed generations.")
 
 
 # ============================================================
-# CLI (mirrors run_model.py)
+# CLI
 # ============================================================
 
 def build_parser():
+
     parser = argparse.ArgumentParser(
-        description="DLM generation pipeline for overconfidence stress-testing."
+        description=(
+            "DLM generation pipeline for overconfidence "
+            "stress-testing experiments."
+        )
     )
-    parser.add_argument("--model", default=PRIMARY_MODEL, help="Model name")
+
     parser.add_argument(
-        "--datasets", nargs="+", default=["pilotdataset"],
+        "--model",
+        default=None,
+        help="Optional single model name. If omitted, all default DLM models run."
+    )
+
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=None,
+        help="Optional list of model names. Overrides the default DLM model list."
+    )
+
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=[
+            "pilot"
+        ],
         help="Datasets to evaluate"
     )
+
     parser.add_argument(
-        "--conditions", nargs="+",
-        default=["neutral", "cautious", "overconfident"],
+        "--conditions",
+        nargs="+",
+        default=[
+            "neutral",
+            "cautious",
+            "overconfident"
+        ],
+        help="Prompting conditions"
     )
-    parser.add_argument("--n-samples",      type=int,   default=3)
-    parser.add_argument("--max-questions",  type=int,   default=20)
-    parser.add_argument("--temperature",    type=float, default=0.7)
-    parser.add_argument("--max-tokens",     type=int,   default=300)
-    parser.add_argument("--raw-output",     default="dlm_models/model_outputs/dlm_raw_generations.jsonl")
-    parser.add_argument("--parsed-output",  default="dlm_models/model_outputs/dlm_parsed_generations.jsonl")
-    parser.add_argument("--error-log",      default="dlm_models/logs/dlm_run_errors.md")
+
+    parser.add_argument(
+        "--n-samples",
+        type=int,
+        default=3,
+        help="Number of stochastic generations per question"
+    )
+
+    parser.add_argument(
+        "--max-questions",
+        type=int,
+        default=None,
+        help="Maximum questions per dataset. Defaults to all questions."
+    )
+
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+        help="Sampling temperature"
+    )
+
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=DEFAULT_MAX_TOKENS,
+        help="Maximum generation length"
+    )
+
+    parser.add_argument(
+        "--parse-retry-attempts",
+        type=int,
+        default=DEFAULT_PARSE_RETRY_ATTEMPTS,
+        help="Same-model retries after malformed JSON or invalid confidence"
+    )
+
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        help="Maximum concurrent generation requests"
+    )
+
+    parser.add_argument(
+        "--raw-output",
+        default="dlm_models/model_outputs/dlm_raw_generations.jsonl",
+        help="Raw response output path"
+    )
+
+    parser.add_argument(
+        "--parsed-output",
+        default="dlm_models/model_outputs/dlm_parsed_generations.jsonl",
+        help="Parsed response output path"
+    )
+
+    parser.add_argument(
+        "--error-log",
+        default="dlm_models/logs/dlm_run_errors.md",
+        help="Markdown error log path"
+    )
+
     return parser
 
 
+# ============================================================
+# Entry point
+# ============================================================
+
 if __name__ == "__main__":
+
     args = build_parser().parse_args()
+
     run(args)

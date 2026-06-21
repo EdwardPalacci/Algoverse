@@ -61,6 +61,7 @@ def produce_alignment_report(rows: list[dict], aligned_rows: list[dict]) -> None
             "meta-llama/llama-3.1-8b-instruct",
             "mistralai/ministral-8b-2512",
             "mercury-2",
+            "inception/mercury-2",
         }),
         ("valid_model_family", lambda row: row.get("model_family") in {"AR", "DLM"}),
         ("valid_prompt_condition", lambda row: row.get("prompt_condition") in {"neutral", "cautious", "overconfident"}),
