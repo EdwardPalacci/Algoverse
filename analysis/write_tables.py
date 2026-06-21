@@ -56,7 +56,12 @@ def produce_alignment_report(rows: list[dict], aligned_rows: list[dict]) -> None
     valid_datasets = {row["dataset"] for row in json.loads(PILOT_DATA.read_text())}
     checks = [
         ("valid_dataset", lambda row: row.get("dataset") in valid_datasets),
-        ("valid_model_id", lambda row: row.get("model_id") in {"qwen/qwen-2.5-7b-instruct", "mercury-2"}),
+        ("valid_model_id", lambda row: row.get("model_id") in {
+            "qwen/qwen-2.5-7b-instruct",
+            "meta-llama/llama-3.1-8b-instruct",
+            "mistralai/mistral-7b-instruct",
+            "mercury-2",
+        }),
         ("valid_model_family", lambda row: row.get("model_family") in {"AR", "DLM"}),
         ("valid_prompt_condition", lambda row: row.get("prompt_condition") in {"neutral", "cautious", "overconfident"}),
         ("confidence_normalized_0_1", lambda row: isinstance(row.get("parsed_confidence"), float) and 0.0 <= row["parsed_confidence"] <= 1.0),

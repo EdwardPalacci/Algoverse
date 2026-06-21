@@ -30,19 +30,33 @@ for reproducibility and auditability.
 Example smoke test
 ------------------------------------------------------------
 
-python run_model.py \
-  --model gpt-4o-mini \
-  --max-questions 5 \
+python ar_models/run_model.py \
+  --model mistralai/mistral-7b-instruct \
+  --datasets smoke \
+  --max-questions 1 \
   --n-samples 1
 
 ------------------------------------------------------------
 Example pilot run
 ------------------------------------------------------------
 
-python run_model.py \
-  --model gpt-4o \
-  --max-questions 150 \
-  --n-samples 5
+python ar_models/run_model.py \
+  --datasets pilot \
+  --n-samples 3
+
+By default, the pilot run evaluates:
+- qwen/qwen-2.5-7b-instruct
+- meta-llama/llama-3.1-8b-instruct
+- mistralai/mistral-7b-instruct
+
+------------------------------------------------------------
+Example single-model pilot run
+------------------------------------------------------------
+
+python ar_models/run_model.py \
+  --model mistralai/mistral-7b-instruct \
+  --datasets pilot \
+  --n-samples 3
 
 ------------------------------------------------------------
 Required environment variables
@@ -70,6 +84,12 @@ from pathlib import Path
 from tqdm import tqdm
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+DEFAULT_AR_MODELS = [
+    "qwen/qwen-2.5-7b-instruct",
+    "meta-llama/llama-3.1-8b-instruct",
+    "mistralai/mistral-7b-instruct",
+]
 
 
 # ============================================================
@@ -280,6 +300,8 @@ DATASET_LOADERS = {
 
     "pilot": load_pilotdataset,
 
+    "pilotdataset": load_pilotdataset,
+
     "smoke": load_smoke,
 
     "gsm8k": load_gsm8k,
@@ -304,6 +326,8 @@ def provider_for(model_name):
         "qwen" in model_name
 
         or "llama" in model_name
+
+        or "mistral" in model_name
 
         or "openrouter" in model_name
 
@@ -518,9 +542,8 @@ def log_error(error_file, message):
 
 def run(args):
 
-    provider = provider_for(args.model)
-
-    client = build_client(provider)
+    models = args.models or ([args.model] if args.model else DEFAULT_AR_MODELS)
+    clients_by_provider = {}
 
     raw_output_path = Path(args.raw_output)
     parsed_output_path = Path(args.parsed_output)
@@ -549,131 +572,147 @@ def run(args):
         error_log_path.open("a", encoding="utf-8") as err_f
     ):
 
-        for dataset_name in args.datasets:
+        for model_name in models:
 
-            dataset = DATASET_LOADERS[dataset_name](
-                limit=args.max_questions
-            )
+            provider = provider_for(model_name)
+            if provider not in clients_by_provider:
+                clients_by_provider[provider] = build_client(provider)
+            client = clients_by_provider[provider]
 
             print(
-                f"\nLoaded {len(dataset)} questions from {dataset_name}"
+                f"\nRunning AR model: {model_name} ({provider})"
             )
 
-            for condition in args.conditions:
+            for dataset_name in args.datasets:
 
-                print(f"Running condition: {condition}")
-
-                system_prompt = SYSTEM_PROMPTS[condition]
-
-                iterator = tqdm(
-                    dataset,
-                    desc=f"{dataset_name}/{condition}"
+                dataset = DATASET_LOADERS[dataset_name](
+                    limit=args.max_questions
                 )
 
-                for item in iterator:
+                print(
+                    f"\nLoaded {len(dataset)} questions from {dataset_name}"
+                )
 
-                    for sample_id in range(args.n_samples):
+                for condition in args.conditions:
 
-                        raw_response = None
+                    print(f"Running condition: {condition}")
 
-                        try:
+                    system_prompt = SYSTEM_PROMPTS[condition]
 
-                            raw_response = query_model(
-                                client=client,
-                                provider=provider,
-                                model=args.model,
-                                system_prompt=system_prompt,
-                                user_prompt=item["question"],
-                                temperature=args.temperature,
-                                max_tokens=args.max_tokens
-                            )
+                    iterator = tqdm(
+                        dataset,
+                        desc=f"{model_name}/{dataset_name}/{condition}"
+                    )
 
-                            raw_record = {
-                                "question_id": item["question_id"],
-                                "dataset": item["dataset"],
-                                "condition": condition,
-                                "sample_id": sample_id,
-                                "model_name": args.model,
-                                "model_architecture": "AR",
-                                "prompt": item["question"],
-                                "raw_response": raw_response
-                            }
+                    for item in iterator:
 
-                            raw_f.write(
-                                json.dumps(raw_record) + "\n"
-                            )
+                        for sample_id in range(args.n_samples):
 
-                            raw_f.flush()
+                            raw_response = None
 
-                            parsed = parse_response(raw_response)
+                            try:
 
-                            if parsed is None:
+                                raw_response = query_model(
+                                    client=client,
+                                    provider=provider,
+                                    model=model_name,
+                                    system_prompt=system_prompt,
+                                    user_prompt=item["question"],
+                                    temperature=args.temperature,
+                                    max_tokens=args.max_tokens
+                                )
+
+                                raw_record = {
+                                    "question_id": item["question_id"],
+                                    "dataset": item["dataset"],
+                                    "condition": condition,
+                                    "sample_id": sample_id,
+                                    "model_name": model_name,
+                                    "model_architecture": "AR",
+                                    "provider": provider,
+                                    "prompt": item["question"],
+                                    "raw_response": raw_response
+                                }
+
+                                raw_f.write(
+                                    json.dumps(raw_record) + "\n"
+                                )
+
+                                raw_f.flush()
+
+                                parsed = parse_response(raw_response)
+
+                                if parsed is None:
+
+                                    log_error(
+                                        err_f,
+                                        (
+                                            f"PARSE ERROR | "
+                                            f"{model_name} | "
+                                            f"{item['question_id']} | "
+                                            f"{condition} | "
+                                            f"sample={sample_id}"
+                                        )
+                                    )
+
+                                    continue
+
+                                confidence = parsed.get("confidence")
+
+                                if not valid_confidence(confidence):
+
+                                    log_error(
+                                        err_f,
+                                        (
+                                            f"INVALID CONFIDENCE | "
+                                            f"{model_name} | "
+                                            f"{item['question_id']} | "
+                                            f"value={confidence}"
+                                        )
+                                    )
+
+                                    continue
+
+                                parsed_record = {
+                                    "question_id": item["question_id"],
+                                    "dataset": item["dataset"],
+                                    "condition": condition,
+                                    "sample_id": sample_id,
+                                    "model_name": model_name,
+                                    "model_architecture": "AR",
+                                    "provider": provider,
+                                    "prompt": item["question"],
+                                    "ground_truth": item["ground_truth"],
+                                    "answer_type": item["answer_type"],
+                                    "raw_response": raw_response,
+                                    "answer": parsed.get("answer"),
+                                    "confidence": confidence,
+                                    "short_explanation": parsed.get(
+                                        "short_explanation"
+                                    ),
+                                    "parse_success": True
+                                }
+
+                                parsed_f.write(
+                                    json.dumps(parsed_record) + "\n"
+                                )
+
+                                parsed_f.flush()
+
+                                total_generations += 1
+
+                            except Exception as exc:
 
                                 log_error(
                                     err_f,
                                     (
-                                        f"PARSE ERROR | "
-                                        f"{item['question_id']} | "
-                                        f"{condition} | "
-                                        f"sample={sample_id}"
+                                        f"RUNTIME ERROR | "
+                                        f"{model_name} | "
+                                        f"{type(exc).__name__}: {exc}"
                                     )
                                 )
 
-                                continue
-
-                            confidence = parsed.get("confidence")
-
-                            if not valid_confidence(confidence):
-
-                                log_error(
-                                    err_f,
-                                    (
-                                        f"INVALID CONFIDENCE | "
-                                        f"{item['question_id']} | "
-                                        f"value={confidence}"
-                                    )
-                                )
-
-                                continue
-
-                            parsed_record = {
-                                "question_id": item["question_id"],
-                                "dataset": item["dataset"],
-                                "condition": condition,
-                                "sample_id": sample_id,
-                                "model_name": args.model,
-                                "model_architecture": "AR",
-                                "prompt": item["question"],
-                                "ground_truth": item["ground_truth"],
-                                "answer_type": item["answer_type"],
-                                "raw_response": raw_response,
-                                "answer": parsed.get("answer"),
-                                "confidence": confidence,
-                                "short_explanation": parsed.get(
-                                    "short_explanation"
-                                ),
-                                "parse_success": True
-                            }
-
-                            parsed_f.write(
-                                json.dumps(parsed_record) + "\n"
-                            )
-
-                            parsed_f.flush()
-
-                            total_generations += 1
-
-                        except Exception as exc:
-
-                            log_error(
-                                err_f,
-                                (
-                                    f"RUNTIME ERROR | "
-                                    f"{type(exc).__name__}: {exc}"
-                                )
-                            )
-
-                            time.sleep(2)
+                                time.sleep(2)
 
     print("\nRun complete.")
     print(f"Saved {total_generations} parsed generations.")
@@ -694,17 +733,22 @@ def build_parser():
 
     parser.add_argument(
         "--model",
-        required=True,
-        help="Model name"
+        default=None,
+        help="Optional single model name. If omitted, all default AR models run."
+    )
+
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=None,
+        help="Optional list of model names. Overrides the default AR model list."
     )
 
     parser.add_argument(
         "--datasets",
         nargs="+",
         default=[
-            "gsm8k",
-            "truthfulqa",
-            "triviaqa"
+            "pilot"
         ],
         help="Datasets to evaluate"
     )
@@ -730,8 +774,8 @@ def build_parser():
     parser.add_argument(
         "--max-questions",
         type=int,
-        default=20,
-        help="Maximum questions per dataset"
+        default=None,
+        help="Maximum questions per dataset. Defaults to all questions."
     )
 
     parser.add_argument(

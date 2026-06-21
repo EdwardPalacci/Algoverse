@@ -36,13 +36,6 @@ class Generation:
     answer_type: str | None = None       # "numeric" | "short_answer" | "multiple_choice"
     model_architecture: str | None = None  # "AR" | "DLM"
     short_explanation: str | None = None
-    # Optional logprob-derived answer confidence in [0,1]. This is the
-    # exp(sum answer-token logprobs) (or length-normalized variant) computed
-    # upstream when token logprobs are available. It is None for the current AR
-    # run because the OpenRouter provider route returned null logprobs, which is
-    # exactly why logprob-based BAS is OPTIONAL (see bas_score). Source field:
-    # `logprob_confidence` or `answer_logprob_confidence`.
-    logprob_confidence: float | None = None
  
     @property
     def parsed_ok(self) -> bool:
@@ -117,21 +110,8 @@ def load_generations(path: str | Path) -> list[Generation]:
             answer_type=d.get("answer_type"),
             model_architecture=d.get("model_architecture"),
             short_explanation=d.get("short_explanation"),
-            logprob_confidence=_coerce_float(
-                _pick(d, "logprob_confidence", "answer_logprob_confidence")
-            ),
         ))
     return rows
- 
- 
-def _coerce_float(v: Any) -> float | None:
-    """None-safe float() used for optional numeric fields like logprob_confidence."""
-    if v is None:
-        return None
-    try:
-        return float(v)
-    except (TypeError, ValueError):
-        return None
  
  
 # ---------------------------------------------------------------------------
@@ -395,18 +375,7 @@ def auroc(gens: Iterable[Generation]) -> float | None:
 # punished toward -inf, so BAS exposes catastrophic overconfidence that ECE and
 # AUROC average away.
 #
-# WHY THIS IS MARKED OPTIONAL
-# ---------------------------
-# BAS needs a per-answer confidence s. Two sources:
-#   - "stated":  the model's self-reported `confidence` field. We HAVE this for
-#                the AR run, so BAS is computable today with confidence_source
-#                = "stated" (the default).
-#   - "logprob": s derived from token logprobs (exp of summed answer-token
-#                logprobs, or a length-normalized variant). We do NOT have this
-#                for the AR run because the OpenRouter provider route returned
-#                null logprobs. With confidence_source="logprob", BAS returns
-#                None until a logprob-exposing route is wired up. That is the
-#                "optional if logits unavailable" path requested by the team.
+# BAS uses the model's self-reported `confidence` field.
 #
 # NUMERICAL NOTE (important for this dataset)
 # -------------------------------------------
@@ -418,45 +387,27 @@ def auroc(gens: Iterable[Generation]) -> float | None:
 # number, and use bas_report() to see how many rows are saturated at the cap.
  
  
-def _confidence_for(g: Generation, source: str) -> float | None:
-    """Return the confidence value BAS should use for one row, per source.
- 
-    source="stated"  -> g.confidence_norm (self-reported, 0..1)
-    source="logprob" -> g.logprob_confidence (None when logprobs unavailable)
-    """
-    if source == "stated":
-        return g.confidence_norm
-    if source == "logprob":
-        return g.logprob_confidence
-    raise ValueError(f"unknown confidence_source: {source!r} (use 'stated' or 'logprob')")
- 
- 
 def bas_score(
     gens: Iterable[Generation],
-    confidence_source: str = "stated",
     epsilon: float = 1e-6,
 ) -> float | None:
     """
     Behavioral Alignment Score (mean decision-theoretic utility). Higher = better,
     max 1.0, no lower bound.
  
-    Uses only rows where BOTH the chosen confidence source and `correct` are
-    non-null (same usable-set discipline as ECE / AUROC).
+    Uses only rows where BOTH self-reported confidence and `correct` are non-null
+    (same usable-set discipline as ECE / AUROC).
  
-    Returns None when:
-      - there are zero usable rows, OR
-      - confidence_source="logprob" and no row carries a logprob_confidence
-        (the "logits unavailable -> BAS optional" path).
+    Returns None when there are zero usable rows.
  
     epsilon clips confidence into [epsilon, 1 - epsilon] so ln(1 - s) stays
     finite. Report it next to the score; it changes the number materially when
     the model emits exact 1.0 confidences on wrong answers.
     """
     usable = [
-        (c, int(g.correct))
+        (g.confidence_norm, int(g.correct))
         for g in gens
-        if (c := _confidence_for(g, confidence_source)) is not None
-        and g.correct is not None
+        if g.confidence_norm is not None and g.correct is not None
     ]
     if not usable:
         return None
@@ -470,7 +421,6 @@ def bas_score(
  
 def bas_report(
     gens: Iterable[Generation],
-    confidence_source: str = "stated",
     epsilon: float = 1e-6,
 ) -> dict[str, Any]:
     """
@@ -479,7 +429,6 @@ def bas_report(
     Returns a dict:
       {
         "available":       bool,    # False => metric is N/A for this source
-        "confidence_source": str,
         "epsilon":         float,
         "bas":             float | None,
         "n_usable":        int,     # rows with confidence + correct
@@ -493,14 +442,12 @@ def bas_report(
     the epsilon clip, which is itself a reportable finding about the model.
     """
     usable = [
-        (c, int(g.correct))
+        (g.confidence_norm, int(g.correct))
         for g in gens
-        if (c := _confidence_for(g, confidence_source)) is not None
-        and g.correct is not None
+        if g.confidence_norm is not None and g.correct is not None
     ]
     report: dict[str, Any] = {
         "available": bool(usable),
-        "confidence_source": confidence_source,
         "epsilon": epsilon,
         "bas": None,
         "n_usable": len(usable),
@@ -641,7 +588,6 @@ def summarize(
     gens: Iterable[Generation],
     group_by: list[str] | None = None,
     n_bins: int = 10,
-    bas_confidence_source: str = "stated",
     bas_epsilon: float = 1e-6,
 ) -> list[dict[str, Any]]:
     """
@@ -650,11 +596,9 @@ def summarize(
     Pass group_by=["condition"] or ["condition", "dataset"] for the breakdown
     tables in the paper.
  
-    BAS is included as an OPTIONAL column. With bas_confidence_source="stated"
-    (default) it is computed from self-reported confidence. With "logprob" it
-    is None until token logprobs are available. The "bas" column is omitted
-    entirely from the output rows when BAS is None for every group, so the
-    table stays clean when the metric is unavailable.
+    BAS is included as an OPTIONAL column using self-reported confidence. The
+    "bas" column is omitted entirely from the output rows when BAS is None for
+    every group, so the table stays clean when the metric is unavailable.
     """
     gens = list(gens)
     if not gens:
@@ -680,14 +624,11 @@ def summarize(
         row["mean_confidence"] = float(np.mean(parsed_confs)) if parsed_confs else float("nan")
         row["ece"] = expected_calibration_error(items, n_bins=n_bins)
         row["auroc"] = auroc(items)
-        row["bas"] = bas_score(
-            items, confidence_source=bas_confidence_source, epsilon=bas_epsilon
-        )
+        row["bas"] = bas_score(items, epsilon=bas_epsilon)
         row["disagreement_rate"] = disagreement_rate(items)
         out.append(row)
  
-    # Drop the optional BAS column entirely if it is unavailable everywhere,
-    # so tables don't carry a column of "n/a" when logprobs aren't wired up.
+    # Drop the optional BAS column entirely if it is unavailable everywhere.
     if all(r.get("bas") is None for r in out):
         for r in out:
             r.pop("bas", None)

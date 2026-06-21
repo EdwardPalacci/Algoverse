@@ -35,10 +35,6 @@ from compute_basic_metrics import (
     unique_answers_per_question,
 )
  
-# BAS confidence source. "stated" uses the model's self-reported confidence
-# (available now). Switch to "logprob" once a logprob-exposing route is wired
-# up; until then logprob-BAS reports as unavailable (None) rather than crashing.
-BAS_CONFIDENCE_SOURCE = "stated"
 # Clip for ln(1 - s) in BAS. Report this value next to any BAS number; the AR
 # run has hundreds of wrong rows at confidence 1.0, so the score depends on it.
 BAS_EPSILON = 1e-6
@@ -353,25 +349,20 @@ for cond in conds:
 # (-inf, 1], higher is better. Unlike ECE/AUROC, BAS does not let overconfident
 # errors average out: a wrong answer at confidence ~1.0 is punished toward -inf.
 #
-# OPTIONAL by design:
-#   - BAS_CONFIDENCE_SOURCE="stated"  -> uses self-reported confidence (works now)
-#   - BAS_CONFIDENCE_SOURCE="logprob" -> needs token logprobs; reports as
-#     "unavailable" until an OpenRouter route that exposes logprobs is wired up.
+# BAS uses the model's self-reported confidence.
 #
 # Read the epsilon and n_saturated lines below before quoting any BAS number:
 # the AR run has many wrong rows at confidence exactly 1.0, so the score is
 # clip-dependent and that sensitivity is itself a finding.
  
 # %%
-_bas_rep = bas_report(gens, confidence_source=BAS_CONFIDENCE_SOURCE, epsilon=BAS_EPSILON)
+_bas_rep = bas_report(gens, epsilon=BAS_EPSILON)
 if not _bas_rep["available"]:
     print(
-        f"BAS [{BAS_CONFIDENCE_SOURCE}]: UNAVAILABLE "
-        f"(no usable confidence for this source; logprob-derived confidence is "
-        f"None until a logprob-exposing route is wired up)."
+        "BAS: UNAVAILABLE "
+        "(no usable rows with confidence and correctness)."
     )
 else:
-    print(f"BAS confidence source : {_bas_rep['confidence_source']}")
     print(f"BAS epsilon (clip)    : {_bas_rep['epsilon']:g}")
     print(f"Overall BAS           : {_bas_rep['bas']:.4f}   (max 1.0, higher better)")
     print(f"  usable rows         : {_bas_rep['n_usable']}")
@@ -385,11 +376,11 @@ else:
     print("\nBy condition:")
     for cond in conds:
         subset = [g for g in gens if g.condition == cond]
-        b = bas_score(subset, confidence_source=BAS_CONFIDENCE_SOURCE, epsilon=BAS_EPSILON)
+        b = bas_score(subset, epsilon=BAS_EPSILON)
         print(f"  {cond:>14}: BAS = {b if b is None else f'{b:.4f}'}")
  
     # Sensitivity check: BAS at a coarser clip, so reviewers see the dependence.
-    _bas_coarse = bas_score(gens, confidence_source=BAS_CONFIDENCE_SOURCE, epsilon=1e-3)
+    _bas_coarse = bas_score(gens, epsilon=1e-3)
     print(
         f"\nSensitivity: BAS at eps=1e-3 = "
         f"{_bas_coarse if _bas_coarse is None else f'{_bas_coarse:.4f}'} "
@@ -451,15 +442,15 @@ for r in most_uncertain:
  
 # %%
 overall_table = format_summary(
-    summarize(gens, bas_confidence_source=BAS_CONFIDENCE_SOURCE, bas_epsilon=BAS_EPSILON)
+    summarize(gens, bas_epsilon=BAS_EPSILON)
 )
 by_cond_table = format_summary(
     summarize(gens, group_by=["condition"],
-              bas_confidence_source=BAS_CONFIDENCE_SOURCE, bas_epsilon=BAS_EPSILON)
+              bas_epsilon=BAS_EPSILON)
 )
 by_cond_ds_table = format_summary(
     summarize(gens, group_by=["condition", "dataset"],
-              bas_confidence_source=BAS_CONFIDENCE_SOURCE, bas_epsilon=BAS_EPSILON)
+              bas_epsilon=BAS_EPSILON)
 )
  
 print("=== Overall ===")
