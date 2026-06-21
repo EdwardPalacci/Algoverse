@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 """
-run_llm_judge.py
-================
- 
 Production LLM-as-judge runner. Merges the robust execution skeleton from
 Edward's analysis/llm_as_judge/run_llm_judge.py (concurrency, resume, raw/parsed
 alignment, parse-failure recovery) with the hardened grading logic from
@@ -60,6 +57,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
  
+# Work whether this file lives in src/ or at the repo root (so it can be invoked
+# as `python3 src_grade_answers__llm_judge.py` from the root). ROOT is the repo
+# root; the sibling modules live under ROOT/src.
+_HERE = Path(__file__).resolve().parent
+ROOT = _HERE if (_HERE / "outputs").exists() else _HERE.parent
+for _p in (str(ROOT / "src"), str(ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+ 
 # Reuse the hardened grading pieces so logic stays single-sourced.
 try:
     from grade_answers_llm import (
@@ -71,8 +77,6 @@ except ImportError:  # pragma: no cover
         build_prompt, make_backend, _aliases_list, _verdict_to_correct, ABSTAIN_PATTERNS,
     )
     from src.grade_answers import _grade_numeric, _grade_multiple_choice
- 
-ROOT = Path(__file__).resolve().parents[1]
  
 MAX_QUERY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 4
@@ -252,11 +256,11 @@ def existing_keys(output_path: Path) -> set:
 # Grading one row (deterministic routing + judge)
 # ---------------------------------------------------------------------------
  
-def _judge_with_retries(backend, question, accepted, incorrect, answer):
+def _judge_with_retries(backend, question, accepted, incorrect, answer, raw_mode=False):
     last = None
     for attempt in range(1, MAX_QUERY_ATTEMPTS + 1):
         try:
-            return backend.grade(question, accepted, incorrect, answer)
+            return backend.grade(question, accepted, incorrect, answer, raw_mode=raw_mode)
         except Exception as e:  # network / API errors
             last = e
             if attempt == MAX_QUERY_ATTEMPTS:
@@ -265,51 +269,84 @@ def _judge_with_retries(backend, question, accepted, incorrect, answer):
     raise last
  
  
-def judge_one(item: dict, backend) -> dict:
+def judge_one(item: dict, backend, judge_input: str = "raw") -> dict:
+    """Grade one row.
+ 
+    Tommy's two fixes are implemented here:
+      1. EMPTY-ANSWER GUARD. If no answer can be extracted (neither a parsed
+         answer nor one recoverable from the raw output), the row is marked
+         empty and INCORRECT deterministically, with NO judge call. This stops
+         the bug where empty answers were judged CORRECT.
+      2. RAW FED TO JUDGE. For free-text, the full raw generation is sent to the
+         judge (raw_mode), so the judge doubles as a tolerant parser and the
+         effective parse rate goes up. Numeric/multiple-choice stay deterministic
+         on the extracted answer (string match is correct there).
+    """
     parsed = item["parsed"]
     raw = item["raw"]
     answer_type = (parsed.get("answer_type") or "").lower()
     ground_truth = parsed.get("ground_truth")
-    answer_text, answer_source = resolve_model_answer(raw, parsed)
+    raw_text = raw.get("raw_response")
+    raw_str = raw_text if isinstance(raw_text, str) else ""
  
-    abstain = False
-    grading_method = "llm_judge"
-    judge_verdict = None
-    judge_reason = None
-    judge_model = getattr(backend, "model", getattr(backend, "name", None))
+    # Best extractable short answer: parsed answer, else regex-recovered from raw.
+    extracted = parsed.get("answer")
+    if extracted is None or not str(extracted).strip():
+        extracted = extract_answer_from_raw(raw_text)
+    extracted_str = "" if extracted is None else str(extracted).strip()
  
+    def result(correct, method, *, verdict=None, reason=None, model=None,
+               model_answer="", source="", empty=False, abstain=False):
+        out = dict(parsed)  # full parsed schema so the analysis pipeline can read it
+        out.update({
+            "correct": correct,
+            "grading_method": method,
+            "CORRECTNESS": (1 if correct is True else (0 if correct is False else None)),
+            "correctness_label": (verdict.upper() if verdict else None),
+            "judge_verdict": verdict,
+            "judge_reason": reason,
+            "judge_model": model,
+            "model_answer": model_answer,
+            "model_answer_source": source,
+            "empty_answer": empty,
+            "abstain": abstain,
+            "source_parse_success": item["source_parse_success"],
+        })
+        return out
+ 
+    # FIX 1: empty answer -> empty + INCORRECT, deterministic, no judge call.
+    if not extracted_str:
+        return result(False, "empty_answer", verdict="incorrect",
+                      reason="empty model answer (nothing to grade)",
+                      model_answer="", source="empty", empty=True)
+ 
+    # Numeric / multiple-choice: deterministic on the extracted answer.
     if answer_type == "numeric":
-        correct = _grade_numeric(parsed.get("answer", answer_text), ground_truth)
-        grading_method, judge_model = "numeric_exact_match", None
-    elif answer_type == "multiple_choice":
-        correct = _grade_multiple_choice(parsed.get("answer", answer_text), ground_truth)
-        grading_method, judge_model = "multiple_choice_match", None
-    elif isinstance(answer_text, str) and ABSTAIN_PATTERNS.search(answer_text):
-        correct, abstain, judge_verdict, judge_reason = False, True, "incorrect", "model abstained"
+        return result(_grade_numeric(extracted_str, ground_truth),
+                      "numeric_exact_match", model_answer=extracted_str, source="extracted_answer")
+    if answer_type == "multiple_choice":
+        return result(_grade_multiple_choice(extracted_str, ground_truth),
+                      "multiple_choice_match", model_answer=extracted_str, source="extracted_answer")
+ 
+    # Abstention -> incorrect (model did not answer), flagged.
+    if ABSTAIN_PATTERNS.search(extracted_str):
+        return result(False, "llm_judge", verdict="incorrect", reason="model abstained",
+                      model="(abstain)", model_answer=extracted_str,
+                      source="extracted_answer", abstain=True)
+ 
+    # FIX 2: free-text -> feed the RAW generation to the judge (parser + grader).
+    if judge_input == "raw" and raw_str.strip():
+        jin, source, raw_mode = raw_str, "raw_response_full_text", True
     else:
-        accepted = _aliases_list(ground_truth)
-        incorrect = _aliases_list(parsed.get("incorrect_answers"))
-        judge_verdict, judge_reason = _judge_with_retries(
-            backend, parsed.get("prompt", ""), accepted, incorrect, answer_text)
-        correct = _verdict_to_correct(judge_verdict)
+        jin, source, raw_mode = extracted_str, "extracted_answer", False
  
-    correctness = 1 if correct is True else (0 if correct is False else None)
- 
-    out = dict(parsed)  # start from full parsed schema so analysis can read it
-    out.update({
-        "correct": correct,
-        "grading_method": grading_method,
-        "CORRECTNESS": correctness,
-        "correctness_label": (None if judge_verdict is None else judge_verdict.upper()),
-        "judge_verdict": judge_verdict,
-        "judge_reason": judge_reason,
-        "judge_model": judge_model,
-        "model_answer": answer_text,
-        "model_answer_source": answer_source,
-        "abstain": abstain,
-        "source_parse_success": item["source_parse_success"],
-    })
-    return out
+    accepted = _aliases_list(ground_truth)
+    incorrect = _aliases_list(parsed.get("incorrect_answers"))
+    verdict, reason = _judge_with_retries(
+        backend, parsed.get("prompt", ""), accepted, incorrect, jin, raw_mode=raw_mode)
+    return result(_verdict_to_correct(verdict), "llm_judge", verdict=verdict, reason=reason,
+                  model=getattr(backend, "model", getattr(backend, "name", None)),
+                  model_answer=jin, source=source)
  
  
 # ---------------------------------------------------------------------------
@@ -344,7 +381,7 @@ def run(args: argparse.Namespace) -> None:
     written = errors = 0
     with output_path.open(mode, encoding="utf-8") as out:
         with ThreadPoolExecutor(max_workers=max(1, args.concurrency)) as ex:
-            futures = {ex.submit(judge_one, it, backend): it for it in aligned}
+            futures = {ex.submit(judge_one, it, backend, args.judge_input): it for it in aligned}
             for fut in tqdm(as_completed(futures), total=len(futures), desc=f"judge/{args.source}"):
                 try:
                     row = fut.result()
@@ -380,6 +417,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--backend", choices=["openrouter", "openai", "ollama", "mock"], default="mock")
     p.add_argument("--judge-model", default=None)
     p.add_argument("--base-url", default=None)
+    p.add_argument("--judge-input", choices=["raw", "extracted"], default="raw",
+                   help="what to send the judge for free-text: 'raw' = full raw generation "
+                        "(judge doubles as parser, higher parse rate; Tommy's recommendation), "
+                        "'extracted' = the cleaned parsed answer only")
     p.add_argument("--concurrency", type=int, default=8, help="parallel requests (use 1-2 for local Ollama)")
     p.add_argument("--max-rows", type=int, default=None, help="cap for smoke tests")
     p.add_argument("--resume", action="store_true", help="append only missing rows")
