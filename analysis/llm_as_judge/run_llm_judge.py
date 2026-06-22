@@ -46,12 +46,24 @@ MAX_QUERY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 5
 DEFAULT_CONCURRENCY = 8
 
-JUDGE_PROMPT_TEMPLATE = """You are an automated grading system. Your task is to evaluate whether the Model Answer provided is factually consistent with the Ground Truth answer.
+JUDGE_PROMPT_TEMPLATE = """You are grading answer correctness.
+
 Question: {question}
-Ground Truth: {gt}
-Model Answer: {model_ans}
-Instructions: 1. Compare the core factual claim of the Model Answer to the Ground Truth. 2. If they are semantically identical or convey the same factual information, respond with 'CORRECT'. 3. If they contradict or if the Model Answer contains different factual information, respond with 'INCORRECT'
-Output only 'CORRECT' or 'INCORRECT'."""
+Dataset: {dataset}
+Answer type: {answer_type}
+Reference answer: {gt}
+Model answer: {model_ans}
+
+Grade only the answer, not the confidence or explanation.
+The model answer may be raw JSON. If it is JSON with an "answer" field, treat that field as the primary answer. Use the explanation only to understand malformed or ambiguous raw output.
+
+If answer type is numeric, compare the final numeric value only.
+If answer type is multiple choice, accept either the correct option letter or the correct option text.
+If the reference answer is a list, treat the entries as alternative acceptable answers. The model answer is correct if it matches any acceptable answer or expresses the same factual claim.
+For TruthfulQA, mark the answer incorrect if it repeats the misconception targeted by the question, even if it is fluent or common.
+If the model answer is empty, malformed, a refusal when the question is answerable, or does not answer the question, mark it incorrect.
+
+Output only CORRECT or INCORRECT."""
 
 
 def generation_key(row: dict) -> tuple[str, str, str, int]:
@@ -146,12 +158,25 @@ def format_ground_truth(value: object) -> str:
     return str(value)
 
 
-def extract_answer_from_raw(raw_response: object) -> object | None:
+def model_answer(raw_row: dict, parsed_row: dict) -> tuple[str, str]:
+    raw_response = raw_row.get("raw_response")
+
+    if raw_response is None:
+        return "", "raw_response_empty"
+
+    if isinstance(raw_response, str):
+        return raw_response.strip(), "raw_response_full_text"
+
+    return json.dumps(raw_response, ensure_ascii=True), "raw_response_serialized"
+
+
+def extract_raw_answer_field(raw_response: object) -> object | None:
     if not isinstance(raw_response, str):
         return None
+
     try:
         parsed = json.loads(raw_response)
-        if isinstance(parsed, dict):
+        if isinstance(parsed, dict) and "answer" in parsed:
             return parsed.get("answer")
         if isinstance(parsed, list):
             for item in parsed:
@@ -159,9 +184,11 @@ def extract_answer_from_raw(raw_response: object) -> object | None:
                     return item.get("answer")
     except Exception:
         pass
+
     match = re.search(r'"answer"\s*:\s*(".*?"|[^,}\n]+)', raw_response, flags=re.DOTALL)
     if not match:
         return None
+
     value = match.group(1).strip()
     if value.startswith('"'):
         try:
@@ -171,16 +198,75 @@ def extract_answer_from_raw(raw_response: object) -> object | None:
     return value
 
 
-def model_answer(raw_row: dict, parsed_row: dict) -> tuple[str, str]:
-    parsed_answer = parsed_row.get("answer")
-    if parsed_answer is not None and str(parsed_answer).strip():
-        return str(parsed_answer), "parsed_answer"
+def normalized_text(value: object) -> str:
+    text = str(value or "").casefold().strip()
+    text = re.sub(r"^[a-e]\s*[:.)-]\s*", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip(" \t\n\r\"'`.,;:")
 
-    raw_answer = extract_answer_from_raw(raw_row.get("raw_response"))
-    if raw_answer is not None and str(raw_answer).strip():
-        return str(raw_answer), "raw_response_answer_field"
 
-    return str(raw_row.get("raw_response") or ""), "raw_response_full_text"
+def numeric_value(value: object) -> float | None:
+    if value is None:
+        return None
+
+    text = str(value).replace(",", "")
+    final_match = re.search(r"####\s*(-?\d+(?:\.\d+)?)", text)
+    if final_match:
+        return float(final_match.group(1))
+
+    numbers = re.findall(r"-?\d+(?:\.\d+)?", text)
+    if not numbers:
+        return None
+    return float(numbers[-1])
+
+
+def option_mapping(question: object) -> dict[str, str]:
+    mapping = {}
+    for line in str(question or "").splitlines():
+        match = re.match(r"\s*([A-E])\s*:\s*(.+?)\s*$", line)
+        if match:
+            mapping[match.group(1).casefold()] = normalized_text(match.group(2))
+    return mapping
+
+
+def deterministic_correctness(parsed_row: dict, raw_row: dict, answer: str) -> str | None:
+    raw_answer = extract_raw_answer_field(raw_row.get("raw_response"))
+    candidate = raw_answer if raw_answer is not None else answer
+    answer_type = normalized_text(parsed_row.get("answer_type"))
+    ground_truth = parsed_row.get("ground_truth")
+
+    if answer_type == "numeric":
+        expected = numeric_value(ground_truth)
+        observed = numeric_value(candidate)
+        if expected is not None and observed is not None and abs(expected - observed) < 1e-9:
+            return "numeric_exact_match"
+
+    refs = ground_truth if isinstance(ground_truth, list) else [ground_truth]
+    candidate_norm = normalized_text(candidate)
+    ref_norms = [normalized_text(ref) for ref in refs if normalized_text(ref)]
+
+    if candidate_norm and candidate_norm in ref_norms:
+        return "answer_text_exact_match"
+
+    if answer_type in {"multiple_choice", "multiple choice"}:
+        options = option_mapping(parsed_row.get("prompt"))
+        if len(candidate_norm) == 1 and candidate_norm in options and options[candidate_norm] in ref_norms:
+            return "multiple_choice_letter_match"
+        if candidate_norm in ref_norms:
+            return "multiple_choice_text_match"
+
+    return None
+
+
+def model_answer_is_empty(raw_row: dict, answer: str) -> bool:
+    if not answer.strip():
+        return True
+
+    raw_answer = extract_raw_answer_field(raw_row.get("raw_response"))
+    if raw_answer is not None and not str(raw_answer).strip():
+        return True
+
+    return False
 
 
 def fallback_parsed_row(raw_row: dict, pilot_lookup: dict[str, dict]) -> dict:
@@ -232,6 +318,8 @@ def build_aligned_rows(
             missing_parsed += 1
             source_parse_success = False
             parsed_row = fallback_parsed_row(raw_row, pilot_lookup)
+        elif parsed_row.get("parse_success") is False:
+            source_parse_success = False
 
         parse_errors = errors_by_key.get(key, [])
 
@@ -319,21 +407,22 @@ def parse_judge_label(text: str) -> tuple[str | None, int | None]:
 def build_prompt(parsed_row: dict, answer: str) -> str:
     return JUDGE_PROMPT_TEMPLATE.format(
         question=parsed_row.get("prompt", ""),
+        dataset=parsed_row.get("dataset", ""),
+        answer_type=parsed_row.get("answer_type", ""),
         gt=format_ground_truth(parsed_row.get("ground_truth")),
         model_ans=answer,
     )
 
 
-def judge_one(item: dict, judge_model: str, api_key: str) -> dict:
-    raw_row = item["raw"]
-    parsed_row = item["parsed"]
-    answer, answer_source = model_answer(raw_row, parsed_row)
-    prompt = build_prompt(parsed_row, answer)
-    judge = OpenRouterJudge(api_key=api_key, model=judge_model)
-    judge_response = query_judge_with_retries(judge, prompt)
-    label, score = parse_judge_label(judge_response)
-
-    result = {
+def base_result(
+    raw_row: dict,
+    parsed_row: dict,
+    judge_model: str,
+    answer: str,
+    answer_source: str,
+    item: dict,
+) -> dict:
+    return {
         "question_id": parsed_row["question_id"],
         "dataset": parsed_row["dataset"],
         "condition": parsed_row["condition"],
@@ -346,15 +435,56 @@ def judge_one(item: dict, judge_model: str, api_key: str) -> dict:
         "ground_truth": parsed_row.get("ground_truth"),
         "model_answer": answer,
         "model_answer_source": answer_source,
-        "CORRECTNESS": score,
-        "correctness_label": label,
+        "model_answer_empty": model_answer_is_empty(raw_row, answer),
         "explanation_answer_agreement": None,
         "source_parse_success": item["source_parse_success"],
         "source_parse_error_count": len(item["source_parse_errors"]),
         "source_parse_errors": item["source_parse_errors"],
         "source_parse_failure_explanation": item["source_parse_failure_explanation"],
-        "judge_raw_response": judge_response,
     }
+
+
+def judge_one(item: dict, judge_model: str, api_key: str) -> dict:
+    raw_row = item["raw"]
+    parsed_row = item["parsed"]
+    answer, answer_source = model_answer(raw_row, parsed_row)
+    result = base_result(
+        raw_row,
+        parsed_row,
+        judge_model,
+        answer,
+        answer_source,
+        item,
+    )
+
+    if result["model_answer_empty"]:
+        result.update({
+            "CORRECTNESS": 0,
+            "correctness_label": "INCORRECT",
+            "judge_raw_response": "AUTO_INCORRECT_EMPTY_MODEL_ANSWER",
+        })
+        return result
+
+    deterministic_reason = deterministic_correctness(parsed_row, raw_row, answer)
+    if deterministic_reason:
+        result.update({
+            "CORRECTNESS": 1,
+            "correctness_label": "CORRECT",
+            "judge_raw_response": "AUTO_CORRECT_DETERMINISTIC_MATCH",
+            "auto_correct_reason": deterministic_reason,
+        })
+        return result
+
+    prompt = build_prompt(parsed_row, answer)
+    judge = OpenRouterJudge(api_key=api_key, model=judge_model)
+    judge_response = query_judge_with_retries(judge, prompt)
+    label, score = parse_judge_label(judge_response)
+
+    result.update({
+        "CORRECTNESS": score,
+        "correctness_label": label,
+        "judge_raw_response": judge_response,
+    })
 
     if score is None:
         result["judge_error"] = "unparseable_judge_response"

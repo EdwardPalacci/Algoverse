@@ -73,12 +73,35 @@ DEFAULT_DLM_MODELS = [
 ]
 
 REQUEST_TIMEOUT_SECONDS = 90
-MAX_QUERY_ATTEMPTS = 3
+MAX_QUERY_ATTEMPTS = 8
 RETRY_BACKOFF_SECONDS = 5
 DEFAULT_CONCURRENCY = 4
-DEFAULT_PARSE_RETRY_ATTEMPTS = 2
-DEFAULT_MAX_TOKENS = 300
+DEFAULT_PARSE_RETRY_ATTEMPTS = 4
+DEFAULT_MAX_TOKENS = 600
 REDACTED_SECRET = "[REDACTED_OPENROUTER_API_KEY]"
+
+RESPONSE_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "answer": {
+            "type": "string"
+        },
+        "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+        },
+        "short_explanation": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "answer",
+        "confidence",
+        "short_explanation"
+    ],
+    "additionalProperties": False
+}
 
 
 # ============================================================
@@ -282,23 +305,75 @@ def query_openrouter(
             }
         ],
         "temperature": temperature,
-        "max_tokens": max_tokens
+        "max_tokens": max_tokens,
+        "reasoning": {
+            "exclude": True
+        },
+        "include_reasoning": False
     }
 
-    try:
-        response = client.chat_completion({
+    request_variants = [
+        {
+            **request_payload,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "dlm_generation_response",
+                    "strict": True,
+                    "schema": RESPONSE_JSON_SCHEMA
+                }
+            }
+        },
+        {
             **request_payload,
             "response_format": {"type": "json_object"}
-        })
+        },
+        request_payload
+    ]
 
-    except Exception as exc:
-        message = str(exc).lower()
-        if "response_format" not in message and "json" not in message:
-            raise
+    last_error = None
 
-        response = client.chat_completion(request_payload)
+    for payload in request_variants:
 
-    return response["choices"][0]["message"]["content"]
+        try:
+            response = client.chat_completion(payload)
+            break
+
+        except Exception as exc:
+            last_error = exc
+            message = str(exc).lower()
+            if "response_format" not in message and "json" not in message and "structured" not in message:
+                raise
+
+    else:
+        raise last_error
+
+    choice = response["choices"][0]
+    message = choice.get("message", {})
+    content = message.get("content")
+
+    if content is None and message.get("reasoning"):
+        content = message.get("reasoning")
+
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, dict):
+                parts.append(str(part.get("text") or part.get("content") or ""))
+            else:
+                parts.append(str(part))
+        content = "\n".join(part for part in parts if part)
+
+    if content is None or not str(content).strip():
+        raise RuntimeError(
+            (
+                "EMPTY RESPONSE CONTENT | "
+                f"finish_reason={choice.get('finish_reason')} | "
+                f"message_keys={sorted(message.keys())}"
+            )
+        )
+
+    return str(content)
 
 
 def query_model(
@@ -618,6 +693,57 @@ def build_parsed_record(raw_record, item, parsed):
     }
 
 
+def fallback_answer_from_raw(raw_response):
+
+    if raw_response is None:
+        return ""
+
+    if not isinstance(raw_response, str):
+        return str(raw_response)
+
+    parsed = parse_response(raw_response)
+    if isinstance(parsed, dict) and parsed.get("answer") is not None:
+        return str(parsed.get("answer"))
+
+    match = re.search(
+        r'"answer"\s*:\s*(".*?"|[^,}\n]+)',
+        raw_response,
+        flags=re.DOTALL
+    )
+    if match:
+        value = match.group(1).strip()
+        if value.startswith('"'):
+            try:
+                return str(json.loads(value))
+            except Exception:
+                return value.strip('"')
+        return value
+
+    return raw_response.strip()
+
+
+def build_unparsed_record(raw_record, item, error_message):
+
+    return {
+        "question_id": raw_record["question_id"],
+        "dataset": raw_record["dataset"],
+        "condition": raw_record["condition"],
+        "sample_id": raw_record["sample_id"],
+        "model_name": raw_record["model_name"],
+        "model_architecture": "DLM",
+        "provider": raw_record["provider"],
+        "prompt": raw_record["prompt"],
+        "ground_truth": item["ground_truth"],
+        "answer_type": item["answer_type"],
+        "raw_response": raw_record["raw_response"],
+        "answer": fallback_answer_from_raw(raw_record["raw_response"]),
+        "confidence": None,
+        "short_explanation": None,
+        "parse_success": False,
+        "parse_error": error_message,
+    }
+
+
 def log_error(error_file, message):
 
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -627,6 +753,49 @@ def log_error(error_file, message):
     )
 
     error_file.flush()
+
+
+def generation_key(model_name, question_id, condition, sample_id):
+
+    return (
+        str(model_name),
+        str(question_id),
+        str(condition),
+        int(sample_id)
+    )
+
+
+def generation_key_from_record(record):
+
+    return generation_key(
+        record["model_name"],
+        record["question_id"],
+        record["condition"],
+        record["sample_id"]
+    )
+
+
+def load_existing_records(path):
+
+    records = {}
+    if not path.exists():
+        return records
+
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            records[generation_key_from_record(record)] = record
+
+    return records
+
+
+def rewrite_records(path, records):
+
+    with path.open("w", encoding="utf-8") as handle:
+        for key in sorted(records):
+            handle.write(json.dumps(records[key]) + "\n")
 
 
 # ============================================================
@@ -672,16 +841,26 @@ def run_generation_job(
             )
 
         except Exception as exc:
-            return raw_record, None, [
-                (
-                    f"RUNTIME ERROR | "
-                    f"{model_name} | "
-                    f"{item['question_id']} | "
-                    f"{condition} | "
-                    f"sample={sample_id} | "
-                    f"{type(exc).__name__}: {exc}"
-                )
-            ]
+            error_message = (
+                f"RUNTIME ERROR | "
+                f"{model_name} | "
+                f"{item['question_id']} | "
+                f"{condition} | "
+                f"sample={sample_id} | "
+                f"{type(exc).__name__}: {exc}"
+            )
+            raw_record = {
+                "question_id": item["question_id"],
+                "dataset": item["dataset"],
+                "condition": condition,
+                "sample_id": sample_id,
+                "model_name": model_name,
+                "model_architecture": "DLM",
+                "provider": provider,
+                "prompt": item["question"],
+                "raw_response": None
+            }
+            return raw_record, build_unparsed_record(raw_record, item, error_message), [error_message]
 
         try:
             raw_record = {
@@ -740,7 +919,20 @@ def run_generation_job(
             )
             continue
 
-    return raw_record, None, [last_error]
+    if raw_record is None:
+        raw_record = {
+            "question_id": item["question_id"],
+            "dataset": item["dataset"],
+            "condition": condition,
+            "sample_id": sample_id,
+            "model_name": model_name,
+            "model_architecture": "DLM",
+            "provider": provider,
+            "prompt": item["question"],
+            "raw_response": None
+        }
+
+    return raw_record, build_unparsed_record(raw_record, item, last_error), [last_error]
 
 
 def run(args):
@@ -768,6 +960,18 @@ def run(args):
     )
 
     total_generations = 0
+    parse_success_generations = 0
+
+    existing_raw_records = load_existing_records(raw_output_path)
+    existing_parsed_records = load_existing_records(parsed_output_path)
+    complete_keys = set()
+
+    if args.resume or args.repair_failures:
+        complete_keys = {
+            key
+            for key, record in existing_parsed_records.items()
+            if record.get("parse_success") is True
+        }
 
     with (
         raw_output_path.open("a", encoding="utf-8") as raw_f,
@@ -806,7 +1010,17 @@ def run(args):
                         (item, sample_id)
                         for item in dataset
                         for sample_id in range(args.n_samples)
+                        if generation_key(
+                            model_name,
+                            item["question_id"],
+                            condition,
+                            sample_id
+                        ) not in complete_keys
                     ]
+
+                    if not jobs:
+                        print("All jobs for this condition are already complete.")
+                        continue
 
                     with ThreadPoolExecutor(
                         max_workers=max(1, args.concurrency)
@@ -862,12 +1076,31 @@ def run(args):
                                 )
                                 parsed_f.flush()
                                 total_generations += 1
+                                if parsed_record.get("parse_success") is True:
+                                    parse_success_generations += 1
 
                             for error in errors:
                                 log_error(err_f, error)
 
+    if args.resume or args.repair_failures:
+        rewrite_records(raw_output_path, load_existing_records(raw_output_path))
+        rewrite_records(parsed_output_path, load_existing_records(parsed_output_path))
+
+    final_parsed_records = load_existing_records(parsed_output_path)
+    final_success = sum(
+        1
+        for record in final_parsed_records.values()
+        if record.get("parse_success") is True
+    )
+    final_total = len(final_parsed_records)
+
     print("\nRun complete.")
     print(f"Saved {total_generations} parsed generations.")
+    print(f"Saved {parse_success_generations} parse-success generations this run.")
+    print(f"Final parsed rows: {final_total}.")
+    print(f"Final parse-success rows: {final_success}.")
+    if final_total:
+        print(f"Final parse-success rate: {final_success / final_total:.4f}.")
 
 
 # ============================================================
@@ -956,6 +1189,18 @@ def build_parser():
         type=int,
         default=DEFAULT_CONCURRENCY,
         help="Maximum concurrent generation requests"
+    )
+
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Skip generation keys already present with parse_success=true"
+    )
+
+    parser.add_argument(
+        "--repair-failures",
+        action="store_true",
+        help="Retry missing or parse_success=false rows and deduplicate outputs"
     )
 
     parser.add_argument(
