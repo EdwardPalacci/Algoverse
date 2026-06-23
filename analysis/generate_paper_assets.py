@@ -8,6 +8,7 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from compute_basic_metrics import produce_basic_metric_figures
 from render_figures import produce_figures
 
 
@@ -508,6 +509,7 @@ def main() -> None:
     produce_alignment_report(all_rows, rows_for_comparison)
     produce_tables(rows_for_comparison, raw_counts)
     produce_figures(rows_for_comparison)
+    produce_basic_metric_figures()
     produce_table_captions()
     produce_audit_and_cases(rows_for_comparison)
     produce_docs(all_rows, raw_counts)

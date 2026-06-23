@@ -12,6 +12,8 @@ import csv
 import json
 from pathlib import Path
 
+from compute_basic_metrics import confidence_histogram, load_ar_judged_generations
+from compute_basic_metrics import reliability_bins_by_condition
 from generate_paper_assets import aligned_rows, load_all_rows
 from render_figures import confidence_distribution_data, prompt_sensitivity_data
 from render_figures import reliability_points
@@ -91,6 +93,40 @@ def check_prompt_sensitivity_csv(path: Path, rows: list[dict]) -> None:
             raise AssertionError(f"{path}: ECE mismatch")
 
 
+def check_basic_histogram_csv(path: Path) -> None:
+    expected = confidence_histogram(load_ar_judged_generations())
+    actual = read_csv(path)
+    if len(actual) != len(expected):
+        raise AssertionError(f"{path}: row count mismatch")
+    for actual_row, expected_row in zip(actual, expected):
+        for key in ["prompt_condition", "bin_low", "bin_high", "bin_center"]:
+            if actual_row[key] != str(expected_row[key]):
+                raise AssertionError(f"{path}: mismatch in {key}")
+        for key in ["count", "total"]:
+            if int(actual_row[key]) != int(expected_row[key]):
+                raise AssertionError(f"{path}: mismatch in {key}")
+        if not close(as_float(actual_row["share"]), float(expected_row["share"])):
+            raise AssertionError(f"{path}: share mismatch")
+
+
+def check_basic_reliability_csv(path: Path) -> None:
+    expected = reliability_bins_by_condition(load_ar_judged_generations())
+    actual = read_csv(path)
+    if len(actual) != len(expected):
+        raise AssertionError(f"{path}: row count mismatch")
+    for actual_row, expected_row in zip(actual, expected):
+        for key in ["prompt_condition", "bin_low", "bin_high", "bin_center"]:
+            if actual_row[key] != str(expected_row[key]):
+                raise AssertionError(f"{path}: mismatch in {key}")
+        if int(actual_row["bin_count"]) != int(expected_row["bin_count"]):
+            raise AssertionError(f"{path}: bin_count mismatch")
+        for key in ["bin_accuracy", "bin_confidence"]:
+            if actual_row[key] == "" and expected_row[key] == "":
+                continue
+            if not close(as_float(actual_row[key]), float(expected_row[key])):
+                raise AssertionError(f"{path}: mismatch in {key}")
+
+
 def check_manifest_files_exist() -> None:
     manifest = read_csv(DOCS_DIR / "artifact_manifest.csv")
     missing = [row["file_path"] for row in manifest if not (ROOT / row["file_path"]).exists()]
@@ -106,12 +142,16 @@ def main() -> None:
     check_png(FIG_DIR / "figure_2_confidence_by_correctness.png")
     check_png(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral.png")
     check_png(FIG_DIR / "figure_3_prompt_sensitivity.png")
+    check_png(FIG_DIR / "ar_pilot_confidence_histogram.png")
+    check_png(FIG_DIR / "ar_pilot_reliability_diagram.png")
 
     check_reliability_csv(FIG_DIR / "figure_1_reliability_diagram_data.csv", rows)
     check_distribution_csv(FIG_DIR / "figure_2_confidence_by_correctness_data.csv", confidence_distribution_data(rows))
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
     check_distribution_csv(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral_data.csv", confidence_distribution_data(neutral_rows))
     check_prompt_sensitivity_csv(FIG_DIR / "figure_3_prompt_sensitivity_data.csv", rows)
+    check_basic_histogram_csv(FIG_DIR / "ar_pilot_confidence_histogram_data.csv")
+    check_basic_reliability_csv(FIG_DIR / "ar_pilot_reliability_diagram_data.csv")
 
     for schema_path in ["schema_benchmark_items.json", "schema_generations.json", "schema_metrics.json"]:
         json.loads((DOCS_DIR / schema_path).read_text())
