@@ -1,0 +1,1 @@
+Figure 8. Risk-coverage curves by model family. Generations are sorted from highest to lowest reported confidence, and each point reports the empirical error rate among retained generations at a given coverage level. Lower curves indicate better confidence-based selective prediction and support the AURC values reported in the metric tables.

@@ -1,1 +1,1 @@
-Figure 1. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the three autoregressive models can be compared against the single diffusion language model without sample-size distortion.
+Figure 1. Benchmark pipeline. Input questions are converted into prompt-conditioned benchmark items, routed through autoregressive language models (AR) and the diffusion language model (DLM), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses.

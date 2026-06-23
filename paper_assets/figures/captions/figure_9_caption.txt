@@ -1,0 +1,1 @@
+Figure 9. Dataset-level accuracy and expected calibration error by model family. Values are computed from the aligned judged generations. The heatmap highlights that aggregate metrics hide substantial dataset-level variation, especially on SimpleQA.

@@ -506,9 +506,10 @@ def produce_schema_files() -> None:
 
 
 def remove_stale_figure_files() -> None:
-    for suffix in ("*.png", "*.csv", "*.txt"):
-        for path in FIG_DIR.glob(suffix):
-            path.unlink()
+    for directory in [FIG_DIR, FIG_PNG_DIR, FIG_CSV_DIR, FIG_CAPTION_DIR]:
+        for suffix in ("*.png", "*.csv", "*.txt"):
+            for path in directory.glob(suffix):
+                path.unlink()
     stale_patterns = [
         "ar_pilot_*",
         "figure_1.png",
@@ -551,7 +552,7 @@ def produce_manifest() -> None:
     for rel, description in [
         ("analysis/generate_paper_assets.py", "Paper asset generation script"),
         ("analysis/check_review_artifacts.py", "Paper asset validation script"),
-        ("analysis/compute_basic_metrics.py", "Figure 1 and Figure 2 metric rendering helpers"),
+        ("analysis/compute_basic_metrics.py", "Figure 2 and Figure 3 metric rendering helpers"),
         ("analysis/render_figures.py", "Figure rendering helpers"),
         ("analysis/llm_as_judge/llm_as_judge.py", "Canonical LLM-as-judge script"),
     ]:

@@ -505,33 +505,33 @@ def fmt(value: object) -> object:
 def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> None:
     generations = list(gens) if gens is not None else load_judged_generations()
     write_confidence_histogram_figure(
-        FIG_PNG_DIR / "figure_1_confidence_histogram.png",
+        FIG_PNG_DIR / "figure_2_confidence_histogram.png",
         generations,
     )
     histogram_rows = confidence_histogram(generations)
     write_csv(
-        FIG_CSV_DIR / "figure_1_confidence_histogram_data.csv",
+        FIG_CSV_DIR / "figure_2_confidence_histogram_data.csv",
         histogram_rows,
         ["model_family", "prompt_condition", "bin_low", "bin_high", "bin_center", "count", "total", "share"],
     )
     write_text(
-        FIG_CAPTION_DIR / "figure_1_caption.txt",
-        "Figure 1. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the three autoregressive models can be compared against the single diffusion language model without sample-size distortion.\n",
+        FIG_CAPTION_DIR / "figure_2_caption.txt",
+        "Figure 2. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the three autoregressive models can be compared against the single diffusion language model without sample-size distortion.\n",
     )
 
     write_reliability_by_condition_figure(
-        FIG_PNG_DIR / "figure_2_reliability_diagram.png",
+        FIG_PNG_DIR / "figure_3_reliability_diagram.png",
         generations,
     )
     reliability_rows = reliability_bins_by_condition(generations)
     write_csv(
-        FIG_CSV_DIR / "figure_2_reliability_diagram_data.csv",
+        FIG_CSV_DIR / "figure_3_reliability_diagram_data.csv",
         reliability_rows,
         ["model_family", "prompt_condition", "bin_low", "bin_high", "bin_center", "bin_count", "bin_accuracy", "bin_confidence"],
     )
     write_text(
-        FIG_CAPTION_DIR / "figure_2_caption.txt",
-        "Figure 2. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and the diffusion language model (DLM); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
+        FIG_CAPTION_DIR / "figure_3_caption.txt",
+        "Figure 3. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and the diffusion language model (DLM); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
     )
 
 
