@@ -1,1 +1,0 @@
-AR pilot reliability diagrams by prompt condition. Bars show empirical accuracy in each confidence bin; points show mean reported confidence in that bin. Rows are pooled across the current AR models and graded with the current LLM-as-judge labels.

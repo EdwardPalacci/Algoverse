@@ -459,6 +459,21 @@ def produce_schema_files() -> None:
         write_text(DOCS_DIR / filename, json.dumps(schema, indent=2) + "\n")
 
 
+def remove_stale_figure_files() -> None:
+    stale_patterns = [
+        "ar_pilot_*",
+        "figure_1.png",
+        "figure_1_reliability_diagram*",
+        "figure_2.png",
+        "figure_2_confidence_by_correctness*",
+        "figure_2_2_*",
+        "figure_3_prompt_sensitivity*",
+    ]
+    for pattern in stale_patterns:
+        for path in FIG_DIR.glob(pattern):
+            path.unlink()
+
+
 def produce_manifest() -> None:
     definitions = []
     for path in [
@@ -504,6 +519,7 @@ def main() -> None:
     for directory in [TABLE_DIR, FIG_DIR, QC_DIR, DOCS_DIR]:
         directory.mkdir(parents=True, exist_ok=True)
 
+    remove_stale_figure_files()
     all_rows, raw_counts = load_all_rows()
     rows_for_comparison = aligned_rows(all_rows)
     produce_alignment_report(all_rows, rows_for_comparison)

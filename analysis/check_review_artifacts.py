@@ -138,20 +138,20 @@ def main() -> None:
     all_rows, _raw_counts = load_all_rows()
     rows = aligned_rows(all_rows)
 
-    check_png(FIG_DIR / "figure_1_reliability_diagram.png")
-    check_png(FIG_DIR / "figure_2_confidence_by_correctness.png")
-    check_png(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral.png")
-    check_png(FIG_DIR / "figure_3_prompt_sensitivity.png")
-    check_png(FIG_DIR / "ar_pilot_confidence_histogram.png")
-    check_png(FIG_DIR / "ar_pilot_reliability_diagram.png")
+    check_png(FIG_DIR / "figure_1_confidence_histogram.png")
+    check_png(FIG_DIR / "figure_2_reliability_diagram.png")
+    check_png(FIG_DIR / "figure_3_ar_dlm_reliability_diagram.png")
+    check_png(FIG_DIR / "figure_4_confidence_by_correctness.png")
+    check_png(FIG_DIR / "figure_5_confidence_by_correctness_neutral.png")
+    check_png(FIG_DIR / "figure_6_prompt_sensitivity.png")
 
-    check_reliability_csv(FIG_DIR / "figure_1_reliability_diagram_data.csv", rows)
-    check_distribution_csv(FIG_DIR / "figure_2_confidence_by_correctness_data.csv", confidence_distribution_data(rows))
+    check_basic_histogram_csv(FIG_DIR / "figure_1_confidence_histogram_data.csv")
+    check_basic_reliability_csv(FIG_DIR / "figure_2_reliability_diagram_data.csv")
+    check_reliability_csv(FIG_DIR / "figure_3_ar_dlm_reliability_diagram_data.csv", rows)
+    check_distribution_csv(FIG_DIR / "figure_4_confidence_by_correctness_data.csv", confidence_distribution_data(rows))
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
-    check_distribution_csv(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral_data.csv", confidence_distribution_data(neutral_rows))
-    check_prompt_sensitivity_csv(FIG_DIR / "figure_3_prompt_sensitivity_data.csv", rows)
-    check_basic_histogram_csv(FIG_DIR / "ar_pilot_confidence_histogram_data.csv")
-    check_basic_reliability_csv(FIG_DIR / "ar_pilot_reliability_diagram_data.csv")
+    check_distribution_csv(FIG_DIR / "figure_5_confidence_by_correctness_neutral_data.csv", confidence_distribution_data(neutral_rows))
+    check_prompt_sensitivity_csv(FIG_DIR / "figure_6_prompt_sensitivity_data.csv", rows)
 
     for schema_path in ["schema_benchmark_items.json", "schema_generations.json", "schema_metrics.json"]:
         json.loads((DOCS_DIR / schema_path).read_text())

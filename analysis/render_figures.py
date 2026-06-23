@@ -5,7 +5,6 @@ import ctypes
 import ctypes.util
 import math
 import os
-import shutil
 from pathlib import Path
 
 os.environ.setdefault("XDG_CACHE_HOME", "/tmp")
@@ -371,35 +370,33 @@ def write_prompt_sensitivity_figure(path: Path, rows: list[dict]) -> list[dict]:
 
 
 def produce_figures(rows: list[dict]) -> None:
-    reliability_data = write_reliability_figure(FIG_DIR / "figure_1_reliability_diagram.png", rows)
-    shutil.copyfile(FIG_DIR / "figure_1_reliability_diagram.png", FIG_DIR / "figure_1.png")
-    write_csv(FIG_DIR / "figure_1_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy"])
+    reliability_data = write_reliability_figure(FIG_DIR / "figure_3_ar_dlm_reliability_diagram.png", rows)
+    write_csv(FIG_DIR / "figure_3_ar_dlm_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy"])
     write_text(
-        FIG_DIR / "figure_1_caption.txt",
-        "Figure 1. Reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels.\n",
+        FIG_DIR / "figure_3_caption.txt",
+        "Figure 3. AR/DLM reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels.\n",
     )
 
-    write_distribution_figure(FIG_DIR / "figure_2_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
-    shutil.copyfile(FIG_DIR / "figure_2_confidence_by_correctness.png", FIG_DIR / "figure_2.png")
+    write_distribution_figure(FIG_DIR / "figure_4_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
     figure_2_data = confidence_distribution_data(rows)
-    write_csv(FIG_DIR / "figure_2_confidence_by_correctness_data.csv", figure_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
+    write_csv(FIG_DIR / "figure_4_confidence_by_correctness_data.csv", figure_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
-        FIG_DIR / "figure_2_caption.txt",
-        "Figure 2. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes the diffusion language model. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
+        FIG_DIR / "figure_4_caption.txt",
+        "Figure 4. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes the diffusion language model. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
     )
 
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
-    write_distribution_figure(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral.png", neutral_rows, "Reported confidence by answer outcome: neutral prompt")
-    figure_2_2_data = confidence_distribution_data(neutral_rows)
-    write_csv(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral_data.csv", figure_2_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
+    write_distribution_figure(FIG_DIR / "figure_5_confidence_by_correctness_neutral.png", neutral_rows, "Reported confidence by answer outcome: neutral prompt")
+    neutral_data = confidence_distribution_data(neutral_rows)
+    write_csv(FIG_DIR / "figure_5_confidence_by_correctness_neutral_data.csv", neutral_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
-        FIG_DIR / "figure_2_2_caption.txt",
-        "Figure 2.2. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. This neutral-only comparison controls the prompt condition across autoregressive language models (AR) and the diffusion language model (DLM), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
+        FIG_DIR / "figure_5_caption.txt",
+        "Figure 5. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. This neutral-only comparison controls the prompt condition across autoregressive language models (AR) and the diffusion language model (DLM), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
     )
 
-    prompt_data = write_prompt_sensitivity_figure(FIG_DIR / "figure_3_prompt_sensitivity.png", rows)
-    write_csv(FIG_DIR / "figure_3_prompt_sensitivity_data.csv", prompt_data, ["model_family", "prompt_condition", "expected_calibration_error", "N"])
+    prompt_data = write_prompt_sensitivity_figure(FIG_DIR / "figure_6_prompt_sensitivity.png", rows)
+    write_csv(FIG_DIR / "figure_6_prompt_sensitivity_data.csv", prompt_data, ["model_family", "prompt_condition", "expected_calibration_error", "N"])
     write_text(
-        FIG_DIR / "figure_3_caption.txt",
-        "Figure 3. Prompt sensitivity measured by expected calibration error. Expected calibration error is computed with 10 equal-width bins of verbalized confidence normalized to [0, 1]. The x-axis gives the prompt condition and the y-axis gives expected calibration error. Bars compare the autoregressive language model (AR) and diffusion language model (DLM) on the shared question-ID analysis set.\n",
+        FIG_DIR / "figure_6_caption.txt",
+        "Figure 6. Prompt sensitivity measured by expected calibration error. Expected calibration error is computed with 10 equal-width bins of verbalized confidence normalized to [0, 1]. The x-axis gives the prompt condition and the y-axis gives expected calibration error. Bars compare the autoregressive language model (AR) and diffusion language model (DLM) on the shared question-ID analysis set.\n",
     )

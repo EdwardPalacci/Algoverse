@@ -1,1 +1,0 @@
-AR pilot confidence histogram. Counts are pooled across the current AR models and split by prompt condition using the current LLM-as-judge generation data.

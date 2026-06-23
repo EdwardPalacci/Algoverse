@@ -6,13 +6,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from compute_metrics import ECE_BINS, mean
 from render_figures import CairoFigure, write_csv, write_text
 
 
 ROOT = Path(__file__).resolve().parents[1]
 FIG_DIR = ROOT / "paper_assets" / "figures"
+ECE_BINS = 10
+HIGH_CONFIDENCE_THRESHOLD = 0.90
 CONDITION_ORDER = ["cautious", "neutral", "overconfident"]
+
+
+def mean(values: Iterable[float]) -> float | None:
+    values = list(values)
+    return sum(values) / len(values) if values else None
 
 
 @dataclass
@@ -323,36 +329,155 @@ def format_summary(rows: list[dict]) -> str:
     return f"{header}\n{separator}\n{body}"
 
 
+def row_ece(rows: list[dict], bins: int = ECE_BINS) -> float | None:
+    """Expected calibration error for normalized analysis rows."""
+    usable = [
+        row for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is not None
+    ]
+    if not usable:
+        return None
+    total = len(usable)
+    score = 0.0
+    for bin_index in range(bins):
+        low = bin_index / bins
+        high = (bin_index + 1) / bins
+        if bin_index == bins - 1:
+            bucket = [row for row in usable if low <= row["parsed_confidence"] <= high]
+        else:
+            bucket = [row for row in usable if low <= row["parsed_confidence"] < high]
+        if not bucket:
+            continue
+        bucket_accuracy = mean(1.0 if row["correct_auto"] else 0.0 for row in bucket)
+        bucket_confidence = mean(row["parsed_confidence"] for row in bucket)
+        score += (len(bucket) / total) * abs(bucket_accuracy - bucket_confidence)
+    return score
+
+
+def row_brier(rows: list[dict]) -> float | None:
+    """Brier score for normalized analysis rows."""
+    values = []
+    for row in rows:
+        confidence = row.get("parsed_confidence")
+        if confidence is not None and row.get("correct_auto") is not None:
+            target = 1.0 if row["correct_auto"] else 0.0
+            values.append((confidence - target) ** 2)
+    return mean(values)
+
+
+def row_auroc(rows: list[dict]) -> float | None:
+    """Area under ROC for normalized analysis rows."""
+    positive = [
+        row["parsed_confidence"] for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is True
+    ]
+    negative = [
+        row["parsed_confidence"] for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is False
+    ]
+    if not positive or not negative:
+        return None
+    wins = 0.0
+    for pos in positive:
+        for neg in negative:
+            if pos > neg:
+                wins += 1.0
+            elif pos == neg:
+                wins += 0.5
+    return wins / (len(positive) * len(negative))
+
+
+def row_metric_row(rows: list[dict], raw_count: int | None = None) -> dict:
+    """Aggregate metric row for normalized analysis rows."""
+    n = len(rows)
+    correct = sum(1 for row in rows if row.get("correct_auto") is True)
+    confidences = [
+        row["parsed_confidence"] for row in rows
+        if row.get("parsed_confidence") is not None
+    ]
+    high_confidence_wrong = sum(
+        1 for row in rows
+        if row.get("correct_auto") is False
+        and row.get("parsed_confidence") is not None
+        and row["parsed_confidence"] >= HIGH_CONFIDENCE_THRESHOLD
+    )
+    parsed = sum(1 for row in rows if row.get("source_parse_success") is not False)
+    return {
+        "N": n,
+        "accuracy": correct / n if n else None,
+        "mean_confidence": mean(confidences),
+        "expected_calibration_error": row_ece(rows),
+        "brier_score": row_brier(rows),
+        "area_under_roc": row_auroc(rows),
+        "high_confidence_wrong_rate": high_confidence_wrong / n if n else None,
+        "parse_success": parsed / raw_count if raw_count else None,
+    }
+
+
+def row_reliability_points(rows: list[dict], family: str) -> list[tuple[float, float]]:
+    """Reliability points for normalized analysis rows."""
+    family_rows = [
+        row for row in rows
+        if row["model_family"] == family
+        and row.get("parsed_confidence") is not None
+    ]
+    points = []
+    for bin_index in range(ECE_BINS):
+        low = bin_index / ECE_BINS
+        high = (bin_index + 1) / ECE_BINS
+        if bin_index == ECE_BINS - 1:
+            bucket = [row for row in family_rows if low <= row["parsed_confidence"] <= high]
+        else:
+            bucket = [row for row in family_rows if low <= row["parsed_confidence"] < high]
+        if bucket:
+            points.append((
+                mean(row["parsed_confidence"] for row in bucket),
+                mean(1.0 if row["correct_auto"] else 0.0 for row in bucket),
+            ))
+    return points
+
+
+def fmt(value: object) -> object:
+    if value is None:
+        return "NA"
+    if isinstance(value, float):
+        return f"{value:.6f}"
+    return value
+
+
 def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> None:
     generations = list(gens) if gens is not None else load_ar_judged_generations()
     write_confidence_histogram_figure(
-        FIG_DIR / "ar_pilot_confidence_histogram.png",
+        FIG_DIR / "figure_1_confidence_histogram.png",
         generations,
     )
     histogram_rows = confidence_histogram(generations)
     write_csv(
-        FIG_DIR / "ar_pilot_confidence_histogram_data.csv",
+        FIG_DIR / "figure_1_confidence_histogram_data.csv",
         histogram_rows,
         ["prompt_condition", "bin_low", "bin_high", "bin_center", "count", "total", "share"],
     )
     write_text(
-        FIG_DIR / "ar_pilot_confidence_histogram_caption.txt",
-        "AR pilot confidence histogram. Counts are pooled across the current AR models and split by prompt condition using the current LLM-as-judge generation data.\n",
+        FIG_DIR / "figure_1_caption.txt",
+        "Figure 1. Confidence histogram by prompt condition for the autoregressive models. Counts are pooled across Gemini Flash, GPT-4.1-mini, and Grok 4.3 using the current LLM-as-judge generation data.\n",
     )
 
     write_reliability_by_condition_figure(
-        FIG_DIR / "ar_pilot_reliability_diagram.png",
+        FIG_DIR / "figure_2_reliability_diagram.png",
         generations,
     )
     reliability_rows = reliability_bins_by_condition(generations)
     write_csv(
-        FIG_DIR / "ar_pilot_reliability_diagram_data.csv",
+        FIG_DIR / "figure_2_reliability_diagram_data.csv",
         reliability_rows,
         ["prompt_condition", "bin_low", "bin_high", "bin_center", "bin_count", "bin_accuracy", "bin_confidence"],
     )
     write_text(
-        FIG_DIR / "ar_pilot_reliability_diagram_caption.txt",
-        "AR pilot reliability diagrams by prompt condition. Bars show empirical accuracy in each confidence bin; points show mean reported confidence in that bin. Rows are pooled across the current AR models and graded with the current LLM-as-judge labels.\n",
+        FIG_DIR / "figure_2_caption.txt",
+        "Figure 2. Reliability diagrams by prompt condition for the autoregressive models. Bars show empirical accuracy in each confidence bin; points show mean reported confidence in that bin. Rows are pooled across Gemini Flash, GPT-4.1-mini, and Grok 4.3 and graded with the current LLM-as-judge labels.\n",
     )
 
 

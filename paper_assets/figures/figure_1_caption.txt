@@ -1,1 +1,1 @@
-Figure 1. Reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels.
+Figure 1. Confidence histogram by prompt condition for the autoregressive models. Counts are pooled across Gemini Flash, GPT-4.1-mini, and Grok 4.3 using the current LLM-as-judge generation data.
