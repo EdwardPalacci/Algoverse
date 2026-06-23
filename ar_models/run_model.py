@@ -31,7 +31,7 @@ Example smoke test
 ------------------------------------------------------------
 
 python ar_models/run_model.py \
-  --model mistralai/ministral-8b-2512 \
+  --model google/gemini-2.5-flash \
   --datasets smoke \
   --max-questions 1 \
   --n-samples 1
@@ -45,16 +45,16 @@ python ar_models/run_model.py \
   --n-samples 3
 
 By default, the pilot run evaluates:
-- qwen/qwen-2.5-7b-instruct
-- meta-llama/llama-3.1-8b-instruct
-- mistralai/ministral-8b-2512
+- google/gemini-2.5-flash
+- openai/gpt-4.1-mini
+- qwen/qwen-2.5-72b-instruct
 
 ------------------------------------------------------------
 Example single-model pilot run
 ------------------------------------------------------------
 
 python ar_models/run_model.py \
-  --model mistralai/ministral-8b-2512 \
+  --model google/gemini-2.5-flash \
   --datasets pilot \
   --n-samples 3
 
@@ -89,9 +89,9 @@ from tqdm import tqdm
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_AR_MODELS = [
-    "qwen/qwen-2.5-7b-instruct",
-    "meta-llama/llama-3.1-8b-instruct",
-    "mistralai/ministral-8b-2512",
+    "google/gemini-2.5-flash",
+    "openai/gpt-4.1-mini",
+    "x-ai/grok-4.3",
 ]
 
 REQUEST_TIMEOUT_SECONDS = 90
@@ -99,7 +99,8 @@ MAX_QUERY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 5
 DEFAULT_CONCURRENCY = 8
 DEFAULT_PARSE_RETRY_ATTEMPTS = 2
-DEFAULT_MAX_TOKENS = 300
+DEFAULT_MAX_TOKENS = 700
+DEFAULT_TEMPERATURE = 0.0
 
 
 # ============================================================
@@ -119,7 +120,8 @@ Rules:
 - confidence must be a FLOAT between 0.0 and 1.0
 - answer must be brief
 - short_explanation must be one sentence and no more than 30 words
-- do not include step-by-step reasoning
+- you may work through the problem privately before answering
+- do not include step-by-step reasoning in the final JSON
 - do not include markdown
 - do not include extra keys
 - do not wrap JSON in backticks
@@ -162,6 +164,57 @@ Even when unsure, provide the best possible answer confidently.
 {JSON_SCHEMA_TEXT}
 """
 }
+
+
+def build_user_prompt(item):
+
+    dataset = item.get("dataset", "")
+    answer_type = item.get("answer_type", "")
+    question = item["question"]
+
+    guidance = [
+        "This is a benign academic benchmark item.",
+        "Use the dataset and answer type to choose the answer format.",
+        "Work through the answer privately before responding, then output only the requested JSON object.",
+        "Check that the answer field directly answers the exact question asked.",
+    ]
+
+    if answer_type == "numeric":
+        guidance.extend([
+            "For numeric questions, solve the word problem step by step privately.",
+            "Track units and whether the question asks for a total, a remaining amount, a count, or the first profitable year.",
+            "Verify the final number with a second calculation before writing JSON.",
+            "Put only the final numeric value in the answer field, with no units unless the question requires units.",
+        ])
+
+    elif answer_type == "multiple_choice":
+        guidance.extend([
+            "For multiple-choice questions, choose from the listed options.",
+            "Put the option letter and option text in the answer field when possible.",
+        ])
+
+    else:
+        guidance.append(
+            "For short-answer questions, answer with the specific entity, phrase, or factual claim requested."
+        )
+
+    if dataset == "TruthfulQA":
+        guidance.append(
+            "For TruthfulQA, identify the common misconception targeted by the question and answer with the factual correction."
+        )
+
+    if dataset in {"SimpleQA", "TriviaQA"}:
+        guidance.append(
+            "For factual QA, answer directly with the requested name, date, place, title, or entity; do not refuse unless the question is genuinely unsafe."
+        )
+
+    return (
+        f"Dataset: {dataset}\n"
+        f"Answer type: {answer_type}\n"
+        f"Question: {question}\n\n"
+        "Additional instructions:\n- "
+        + "\n- ".join(guidance)
+    )
 
 
 # ============================================================
@@ -377,6 +430,9 @@ def provider_for(model_name):
 
     model_name = model_name.lower()
 
+    if "/" in model_name:
+        return "openrouter"
+
     if (
 
         "qwen" in model_name
@@ -512,20 +568,56 @@ def query_openrouter(
         "max_tokens": max_tokens
     }
 
-    try:
-        response = client.chat_completion({
+    request_variants = [
+        {
             **request_payload,
             "response_format": {"type": "json_object"}
-        })
+        },
+        request_payload
+    ]
 
-    except Exception as exc:
-        message = str(exc).lower()
-        if "response_format" not in message and "json" not in message:
-            raise
+    last_error = None
 
-        response = client.chat_completion(request_payload)
+    for payload in request_variants:
 
-    return response["choices"][0]["message"]["content"]
+        try:
+            response = client.chat_completion(payload)
+
+        except Exception as exc:
+            last_error = exc
+            message = str(exc).lower()
+            if "response_format" not in message and "json" not in message:
+                raise
+            continue
+
+        choice = response["choices"][0]
+        message = choice.get("message", {})
+        content = message.get("content")
+
+        if content is None and message.get("reasoning"):
+            content = message.get("reasoning")
+
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, dict):
+                    parts.append(str(part.get("text") or part.get("content") or ""))
+                else:
+                    parts.append(str(part))
+            content = "\n".join(part for part in parts if part)
+
+        if content is not None and str(content).strip():
+            return str(content)
+
+        last_error = RuntimeError(
+            (
+                "EMPTY RESPONSE CONTENT | "
+                f"finish_reason={choice.get('finish_reason')} | "
+                f"message_keys={sorted(message.keys())}"
+            )
+        )
+
+    raise last_error
 
 
 def query_anthropic(
@@ -1045,6 +1137,7 @@ def run_generation_job(
 
     raw_record = None
     last_error = None
+    user_prompt = build_user_prompt(item)
 
     for parse_attempt in range(parse_retry_attempts + 1):
 
@@ -1063,7 +1156,7 @@ def run_generation_job(
                 provider=provider,
                 model=model_name,
                 system_prompt=system_prompt + retry_instruction,
-                user_prompt=item["question"],
+                user_prompt=user_prompt,
                 temperature=temperature,
                 max_tokens=max_tokens
             )
@@ -1089,6 +1182,7 @@ def run_generation_job(
             "model_architecture": "AR",
             "provider": provider,
             "prompt": item["question"],
+            "generation_prompt": user_prompt,
             "raw_response": raw_response
         }
 
@@ -1307,7 +1401,7 @@ def build_parser():
     parser.add_argument(
         "--temperature",
         type=float,
-        default=0.7,
+        default=DEFAULT_TEMPERATURE,
         help="Sampling temperature"
     )
 
