@@ -6,14 +6,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from render_figures import CairoFigure, write_csv, write_text
+from render_figures import CairoFigure, FIG_CAPTION_DIR, FIG_CSV_DIR, FIG_PNG_DIR, write_csv, write_text
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FIG_DIR = ROOT / "paper_assets" / "figures"
 ECE_BINS = 10
 HIGH_CONFIDENCE_THRESHOLD = 0.90
 CONDITION_ORDER = ["cautious", "neutral", "overconfident"]
+FAMILY_ORDER = ["AR", "DLM"]
+FAMILY_LABELS = {
+    "AR": "Autoregressive (AR)",
+    "DLM": "Diffusion language model (DLM)",
+}
+FAMILY_COLORS = {
+    "AR": "#2f65a7",
+    "DLM": "#c45a3c",
+}
 
 
 def mean(values: Iterable[float]) -> float | None:
@@ -63,15 +71,22 @@ def load_generations(path: str | Path) -> list[Generation]:
     return [generation_from_row(row) for row in rows]
 
 
+def load_judged_generations(source: str | None = None) -> list[Generation]:
+    """Load current LLM-judge outputs from the split results directory."""
+    sources = [source] if source else ["ar", "dlm"]
+    generations = []
+    for source_name in sources:
+        paths = sorted(
+            (ROOT / "analysis" / "llm_as_judge" / "results" / source_name / "by_model").glob("*/all_datasets.jsonl")
+        )
+        for path in paths:
+            generations.extend(generation_from_row(row) for row in read_jsonl(path))
+    return generations
+
+
 def load_ar_judged_generations() -> list[Generation]:
     """Load current AR LLM-judge outputs from the split results directory."""
-    paths = sorted(
-        (ROOT / "analysis" / "llm_as_judge" / "results" / "ar" / "by_model").glob("*/all_datasets.jsonl")
-    )
-    generations = []
-    for path in paths:
-        generations.extend(generation_from_row(row) for row in read_jsonl(path))
-    return generations
+    return load_judged_generations("ar")
 
 
 def generation_from_row(row: dict) -> Generation:
@@ -124,13 +139,48 @@ def mean_confidence_by_condition(gens: Iterable[Generation]) -> dict[str, float]
 
 
 def confidence_histogram(gens: Iterable[Generation], n_bins: int = ECE_BINS) -> list[dict]:
+    groups: dict[tuple[str, str], list[float]] = defaultdict(list)
+    for generation in gens:
+        if generation.confidence_norm is not None:
+            groups[(generation.model_architecture or "", generation.condition)].append(generation.confidence_norm)
+
+    rows = []
+    families = family_order({family for family, _condition in groups})
+    conditions = condition_order({condition for _family, condition in groups})
+    for condition in conditions:
+        for family in families:
+            values = groups.get((family, condition), [])
+            if not values:
+                continue
+            counts = [0] * n_bins
+            for value in values:
+                index = min(n_bins - 1, max(0, int(value * n_bins)))
+                counts[index] += 1
+            total = len(values)
+            for index, count in enumerate(counts):
+                low = index / n_bins
+                high = (index + 1) / n_bins
+                rows.append({
+                    "model_family": family,
+                    "prompt_condition": condition,
+                    "bin_low": f"{low:.1f}",
+                    "bin_high": f"{high:.1f}",
+                    "bin_center": f"{(low + high) / 2:.2f}",
+                    "count": count,
+                    "total": total,
+                    "share": count / total if total else 0.0,
+                })
+    return rows
+
+
+def confidence_histogram_by_condition(gens: Iterable[Generation], n_bins: int = ECE_BINS) -> list[dict]:
     groups: dict[str, list[float]] = defaultdict(list)
     for generation in gens:
         if generation.confidence_norm is not None:
             groups[generation.condition].append(generation.confidence_norm)
 
     rows = []
-    for condition in condition_order(groups):
+    for condition in condition_order(set(groups)):
         values = groups[condition]
         counts = [0] * n_bins
         for value in values:
@@ -190,22 +240,26 @@ def reliability_bins(gens: Iterable[Generation], n_bins: int = ECE_BINS) -> list
 
 
 def reliability_bins_by_condition(gens: Iterable[Generation], n_bins: int = ECE_BINS) -> list[dict]:
-    grouped: dict[str, list[Generation]] = defaultdict(list)
+    grouped: dict[tuple[str, str], list[Generation]] = defaultdict(list)
     for generation in gens:
-        grouped[generation.condition].append(generation)
+        grouped[(generation.model_architecture or "", generation.condition)].append(generation)
 
     rows = []
-    for condition in condition_order(grouped):
-        for row in reliability_bins(grouped[condition], n_bins=n_bins):
-            rows.append({
-                "prompt_condition": condition,
-                "bin_low": f"{row['bin_low']:.1f}",
-                "bin_high": f"{row['bin_high']:.1f}",
-                "bin_center": f"{row['bin_center']:.2f}",
-                "bin_count": row["bin_count"],
-                "bin_accuracy": "" if row["bin_acc"] is None else row["bin_acc"],
-                "bin_confidence": "" if row["bin_conf"] is None else row["bin_conf"],
-            })
+    families = family_order({family for family, _condition in grouped})
+    conditions = condition_order({condition for _family, condition in grouped})
+    for condition in conditions:
+        for family in families:
+            for row in reliability_bins(grouped.get((family, condition), []), n_bins=n_bins):
+                rows.append({
+                    "model_family": family,
+                    "prompt_condition": condition,
+                    "bin_low": f"{row['bin_low']:.1f}",
+                    "bin_high": f"{row['bin_high']:.1f}",
+                    "bin_center": f"{row['bin_center']:.2f}",
+                    "bin_count": row["bin_count"],
+                    "bin_accuracy": "" if row["bin_acc"] is None else row["bin_acc"],
+                    "bin_confidence": "" if row["bin_conf"] is None else row["bin_conf"],
+                })
     return rows
 
 
@@ -449,80 +503,82 @@ def fmt(value: object) -> object:
 
 
 def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> None:
-    generations = list(gens) if gens is not None else load_ar_judged_generations()
+    generations = list(gens) if gens is not None else load_judged_generations()
     write_confidence_histogram_figure(
-        FIG_DIR / "figure_1_confidence_histogram.png",
+        FIG_PNG_DIR / "figure_1_confidence_histogram.png",
         generations,
     )
     histogram_rows = confidence_histogram(generations)
     write_csv(
-        FIG_DIR / "figure_1_confidence_histogram_data.csv",
+        FIG_CSV_DIR / "figure_1_confidence_histogram_data.csv",
         histogram_rows,
-        ["prompt_condition", "bin_low", "bin_high", "bin_center", "count", "total", "share"],
+        ["model_family", "prompt_condition", "bin_low", "bin_high", "bin_center", "count", "total", "share"],
     )
     write_text(
-        FIG_DIR / "figure_1_caption.txt",
-        "Figure 1. Confidence histogram by prompt condition for the autoregressive models. Counts are pooled across Gemini Flash, GPT-4.1-mini, and Grok 4.3 using the current LLM-as-judge generation data.\n",
+        FIG_CAPTION_DIR / "figure_1_caption.txt",
+        "Figure 1. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the three autoregressive models can be compared against the single diffusion language model without sample-size distortion.\n",
     )
 
     write_reliability_by_condition_figure(
-        FIG_DIR / "figure_2_reliability_diagram.png",
+        FIG_PNG_DIR / "figure_2_reliability_diagram.png",
         generations,
     )
     reliability_rows = reliability_bins_by_condition(generations)
     write_csv(
-        FIG_DIR / "figure_2_reliability_diagram_data.csv",
+        FIG_CSV_DIR / "figure_2_reliability_diagram_data.csv",
         reliability_rows,
-        ["prompt_condition", "bin_low", "bin_high", "bin_center", "bin_count", "bin_accuracy", "bin_confidence"],
+        ["model_family", "prompt_condition", "bin_low", "bin_high", "bin_center", "bin_count", "bin_accuracy", "bin_confidence"],
     )
     write_text(
-        FIG_DIR / "figure_2_caption.txt",
-        "Figure 2. Reliability diagrams by prompt condition for the autoregressive models. Bars show empirical accuracy in each confidence bin; points show mean reported confidence in that bin. Rows are pooled across Gemini Flash, GPT-4.1-mini, and Grok 4.3 and graded with the current LLM-as-judge labels.\n",
+        FIG_CAPTION_DIR / "figure_2_caption.txt",
+        "Figure 2. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and the diffusion language model (DLM); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
     )
 
 
 def write_confidence_histogram_figure(path: Path, gens: list[Generation]) -> None:
     rows = confidence_histogram(gens)
-    max_count = max((row["count"] for row in rows), default=1)
-    fig = CairoFigure(path, width=1120, height=430)
-    fig.text(58, 36, "AR confidence distribution by prompt condition", 20, bold=True)
+    fig = CairoFigure(path, width=1160, height=460)
+    fig.text(58, 36, "Confidence distribution by model family and prompt condition", 20, bold=True)
     for index, condition in enumerate(CONDITION_ORDER):
         left = 78 + index * 345
         right = left + 270
         top = 80
         bottom = 335
         condition_rows = [row for row in rows if row["prompt_condition"] == condition]
-        draw_histogram_panel(fig, left, right, top, bottom, condition, condition_rows, max_count)
+        draw_histogram_panel(fig, left, right, top, bottom, condition, condition_rows)
+    draw_family_legend(fig, 398, 424)
     fig.write()
 
 
-def draw_histogram_panel(fig: CairoFigure, left: int, right: int, top: int, bottom: int, title: str, rows: list[dict], max_count: int) -> None:
+def draw_histogram_panel(fig: CairoFigure, left: int, right: int, top: int, bottom: int, title: str, rows: list[dict]) -> None:
     fig.text((left + right) / 2, top - 22, title, 14, align="center", bold=True)
     for tick in range(6):
         value = tick / 5
         y = bottom - value * (bottom - top)
         fig.line(left, y, right, y, "#dddddd", 0.8)
-        fig.text(left - 10, y + 4, f"{int(value * max_count)}", 10, "#444444", align="right")
+        fig.text(left - 10, y + 4, f"{value:.1f}", 10, "#444444", align="right")
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
     slot = (right - left) / ECE_BINS
+    bar_width = slot / 3
     for row in rows:
         bin_index = int(float(row["bin_low"]) * ECE_BINS)
-        height = (row["count"] / max_count) * (bottom - top) if max_count else 0
-        x = left + bin_index * slot + 3
-        fig.rect(x, bottom - height, slot - 6, height, "#2f65a7")
+        family_index = FAMILY_ORDER.index(row["model_family"]) if row["model_family"] in FAMILY_ORDER else 0
+        height = float(row["share"]) * (bottom - top)
+        x = left + bin_index * slot + (family_index + 0.45) * bar_width
+        fig.rect(x, bottom - height, bar_width, height, FAMILY_COLORS.get(row["model_family"], "#777777"))
     for tick in range(6):
         value = tick / 5
         x = left + value * (right - left)
         fig.text(x, bottom + 20, f"{value:.1f}", 10, "#444444", align="center")
     fig.text((left + right) / 2, bottom + 48, "Reported confidence", 12, align="center")
-    fig.text(left - 44, (top + bottom) / 2, "Count", 12, align="center", rotate=-1.5708)
+    fig.text(left - 44, (top + bottom) / 2, "Share", 12, align="center", rotate=-1.5708)
 
 
 def write_reliability_by_condition_figure(path: Path, gens: list[Generation]) -> None:
     rows = reliability_bins_by_condition(gens)
     fig = CairoFigure(path, width=1120, height=500)
-    fig.text(58, 36, "AR reliability diagrams by prompt condition", 20, bold=True)
+    fig.text(58, 36, "Reliability by model family and prompt condition", 20, bold=True)
     for index, condition in enumerate(CONDITION_ORDER):
         left = 78 + index * 345
         right = left + 270
@@ -530,9 +586,8 @@ def write_reliability_by_condition_figure(path: Path, gens: list[Generation]) ->
         bottom = 345
         condition_rows = [row for row in rows if row["prompt_condition"] == condition]
         draw_reliability_panel(fig, left, right, top, bottom, condition, condition_rows)
-    fig.text(390, 444, "Blue bars: empirical accuracy", 12)
-    fig.text(590, 444, "Orange dots: mean confidence", 12, color="#c45a3c")
-    fig.text(790, 444, "Dashed line: perfect calibration", 12, color="#555555")
+    draw_family_legend(fig, 330, 444)
+    fig.text(810, 444, "Dashed line: perfect calibration", 12, color="#555555")
     fig.write()
 
 
@@ -549,20 +604,28 @@ def draw_reliability_panel(fig: CairoFigure, left: int, right: int, top: int, bo
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
     fig.line(left, bottom, right, top, "#777777", 1.2, dash=(5, 5))
-    slot = (right - left) / ECE_BINS
-    for row in rows:
-        bin_index = int(float(row["bin_low"]) * ECE_BINS)
-        accuracy_value = none_if_blank(row["bin_accuracy"])
-        confidence_value = none_if_blank(row["bin_confidence"])
-        if accuracy_value is not None:
-            height = accuracy_value * (bottom - top)
-            x = left + bin_index * slot + 4
-            fig.rect(x, bottom - height, slot - 8, height, "#2f65a7")
-        if confidence_value is not None:
-            x = left + (bin_index + 0.5) * slot
-            y = bottom - confidence_value * (bottom - top)
-            fig.circle(x, y, 4.5, "#c45a3c")
-    fig.text((left + right) / 2, bottom + 48, "Confidence bin", 12, align="center")
+    for family in FAMILY_ORDER:
+        family_rows = [
+            row for row in rows
+            if row["model_family"] == family
+            and none_if_blank(row["bin_accuracy"]) is not None
+            and none_if_blank(row["bin_confidence"]) is not None
+        ]
+        coords = [
+            (
+                *scale_unit_point(none_if_blank(row["bin_confidence"]), none_if_blank(row["bin_accuracy"]), left, right, top, bottom),
+                int(row["bin_count"]),
+            )
+            for row in family_rows
+        ]
+        for (px, py, pn), (qx, qy, qn) in zip(coords, coords[1:]):
+            if pn >= 20 and qn >= 20:
+                fig.line(px, py, qx, qy, FAMILY_COLORS[family], 2.0)
+        for x, y, bin_count in coords:
+            fig.circle(x, y, 4.2, FAMILY_COLORS[family])
+            if 0 < bin_count < 20:
+                fig.text(x + 6, y - 5, f"n={bin_count}", 8, "#333333")
+    fig.text((left + right) / 2, bottom + 48, "Mean confidence", 12, align="center")
 
 
 def condition_order(groups) -> list[str]:
@@ -574,6 +637,29 @@ def condition_order(groups) -> list[str]:
             condition,
         ),
     )
+
+
+def family_order(families) -> list[str]:
+    return sorted(
+        list(families),
+        key=lambda family: (
+            FAMILY_ORDER.index(family) if family in FAMILY_ORDER else len(FAMILY_ORDER),
+            family,
+        ),
+    )
+
+
+def scale_unit_point(x_value: float | None, y_value: float | None, left: int, right: int, top: int, bottom: int) -> tuple[float, float]:
+    x_value = 0.0 if x_value is None else x_value
+    y_value = 0.0 if y_value is None else y_value
+    return left + x_value * (right - left), bottom - y_value * (bottom - top)
+
+
+def draw_family_legend(fig: CairoFigure, x: int, y: int) -> None:
+    for index, family in enumerate(FAMILY_ORDER):
+        xx = x + index * 170
+        fig.rect(xx, y - 12, 14, 14, FAMILY_COLORS[family])
+        fig.text(xx + 22, y, FAMILY_LABELS[family], 12)
 
 
 def normalize_answer(answer: object) -> str:

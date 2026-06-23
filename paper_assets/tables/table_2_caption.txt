@@ -1,1 +1,1 @@
-Table 2. Aggregate calibration metrics by model. Correctness uses the saved LLM-as-judge labels; numeric and multiple-choice rows use deterministic checks embedded in the judge pipeline.
+Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; behavioral alignment score measures whether cautious and overconfident prompt interventions move confidence in the intended direction relative to neutral prompting.

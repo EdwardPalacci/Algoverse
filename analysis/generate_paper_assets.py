@@ -9,7 +9,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from compute_basic_metrics import produce_basic_metric_figures
-from render_figures import produce_figures
+from render_figures import FIG_CAPTION_DIR, FIG_CSV_DIR, FIG_PNG_DIR, produce_figures
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -189,6 +189,50 @@ def auroc(rows: list[dict]) -> float | None:
     return wins / (len(positive) * len(negative))
 
 
+def aurc(rows: list[dict]) -> float | None:
+    """Area under the risk-coverage curve; lower values are better."""
+    usable = [
+        row for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is not None
+    ]
+    if not usable:
+        return None
+    ranked = sorted(usable, key=lambda row: row["parsed_confidence"], reverse=True)
+    errors = 0
+    risks = []
+    for index, row in enumerate(ranked, start=1):
+        if row["correct_auto"] is False:
+            errors += 1
+        risks.append(errors / index)
+    return mean(risks)
+
+
+def behavioral_alignment_score(rows: list[dict]) -> float | None:
+    """Fraction of paired prompt interventions that move confidence in the intended direction."""
+    by_key: dict[tuple[str, str, int], dict[str, float]] = defaultdict(dict)
+    for row in rows:
+        if row.get("parsed_confidence") is None:
+            continue
+        key = (
+            row.get("model_id", ""),
+            row.get("question_id", ""),
+            int(row.get("sample_id", 0)),
+        )
+        by_key[key][row.get("prompt_condition", "")] = row["parsed_confidence"]
+
+    checks = []
+    for condition_values in by_key.values():
+        neutral = condition_values.get("neutral")
+        if neutral is None:
+            continue
+        if "cautious" in condition_values:
+            checks.append(1.0 if condition_values["cautious"] <= neutral else 0.0)
+        if "overconfident" in condition_values:
+            checks.append(1.0 if condition_values["overconfident"] >= neutral else 0.0)
+    return mean(checks)
+
+
 def metric_row(rows: list[dict], raw_count: int | None = None) -> dict:
     n = len(rows)
     correct = sum(1 for row in rows if row.get("correct_auto") is True)
@@ -205,6 +249,8 @@ def metric_row(rows: list[dict], raw_count: int | None = None) -> dict:
         "accuracy": correct / n if n else None,
         "mean_confidence": mean(confidences),
         "expected_calibration_error": ece(rows),
+        "area_under_risk_coverage": aurc(rows),
+        "behavioral_alignment_score": behavioral_alignment_score(rows),
         "brier_score": brier(rows),
         "area_under_roc": auroc(rows),
         "high_confidence_wrong_rate": high_confidence_wrong / n if n else None,
@@ -282,7 +328,7 @@ def produce_tables(rows: list[dict], raw_counts: dict[tuple[str, str], int]) -> 
             "prompt_condition": condition,
             "confidence_scale": "verbalized probability in [0, 1]",
             "correctness_grader": "LLM-as-judge with deterministic numeric and multiple-choice checks",
-            "metrics": "accuracy; mean confidence; expected calibration error; Brier score; AUROC; high-confidence wrong rate; parse success",
+            "metrics": "accuracy; mean confidence; expected calibration error; AURC; behavioral alignment score; Brier score; AUROC; high-confidence wrong rate; parse success",
         })
     write_csv(TABLE_DIR / "table_1_benchmark_specification.csv", table1, ["dataset", "N", "model", "family", "prompt_condition", "confidence_scale", "correctness_grader", "metrics"])
 
@@ -290,19 +336,19 @@ def produce_tables(rows: list[dict], raw_counts: dict[tuple[str, str], int]) -> 
     for (model, family), group_rows in sorted(grouped(rows, ("model_id", "model_family")).items()):
         metrics = metric_row(group_rows, raw_counts.get((family, model)))
         table2.append({"model": model, "family": family, **{key: fmt(value) for key, value in metrics.items()}})
-    write_csv(TABLE_DIR / "table_2_aggregate_metrics.csv", table2, ["model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "brier_score", "area_under_roc", "high_confidence_wrong_rate", "parse_success"])
+    write_csv(TABLE_DIR / "table_2_aggregate_metrics.csv", table2, ["model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "area_under_risk_coverage", "behavioral_alignment_score", "brier_score", "area_under_roc", "high_confidence_wrong_rate", "parse_success"])
 
     table3 = []
     for (dataset, model, family), group_rows in sorted(grouped(rows, ("dataset", "model_id", "model_family")).items()):
         metrics = metric_row(group_rows)
         table3.append({"dataset": dataset, "model": model, "family": family, **{key: fmt(value) for key, value in metrics.items() if key != "parse_success"}})
-    write_csv(TABLE_DIR / "table_3_per_dataset_metrics.csv", table3, ["dataset", "model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "brier_score", "area_under_roc", "high_confidence_wrong_rate"])
+    write_csv(TABLE_DIR / "table_3_per_dataset_metrics.csv", table3, ["dataset", "model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "area_under_risk_coverage", "behavioral_alignment_score", "brier_score", "area_under_roc", "high_confidence_wrong_rate"])
 
     table4 = []
     for (model, family, condition), group_rows in sorted(grouped(rows, ("model_id", "model_family", "prompt_condition")).items()):
         metrics = metric_row(group_rows)
-        table4.append({"model": model, "family": family, "prompt_condition": condition, **{key: fmt(value) for key, value in metrics.items() if key not in {"area_under_roc", "parse_success"}}})
-    write_csv(TABLE_DIR / "table_4_prompt_condition_metrics.csv", table4, ["model", "family", "prompt_condition", "N", "accuracy", "mean_confidence", "expected_calibration_error", "brier_score", "high_confidence_wrong_rate"])
+        table4.append({"model": model, "family": family, "prompt_condition": condition, **{key: fmt(value) for key, value in metrics.items() if key not in {"area_under_roc", "behavioral_alignment_score", "parse_success"}}})
+    write_csv(TABLE_DIR / "table_4_prompt_condition_metrics.csv", table4, ["model", "family", "prompt_condition", "N", "accuracy", "mean_confidence", "expected_calibration_error", "area_under_risk_coverage", "brier_score", "high_confidence_wrong_rate"])
 
 
 def short(value: object, max_chars: int = 140) -> str:
@@ -366,9 +412,9 @@ def produce_audit_and_cases(rows: list[dict]) -> None:
 def produce_table_captions() -> None:
     captions = {
         "table_1_caption.txt": "Table 1. Benchmark specification by dataset, model, model family, and prompt condition. N is the number of judged generations in the aligned comparative analysis set.\n",
-        "table_2_caption.txt": "Table 2. Aggregate calibration metrics by model. Correctness uses the saved LLM-as-judge labels; numeric and multiple-choice rows use deterministic checks embedded in the judge pipeline.\n",
-        "table_3_caption.txt": "Table 3. Dataset-level calibration metrics by model. Metrics are computed on judged generations from the shared question-ID analysis set.\n",
-        "table_4_caption.txt": "Table 4. Prompt-condition calibration metrics. Expected calibration error and high-confidence wrong rate quantify sensitivity to cautious, neutral, and overconfident prompting.\n",
+        "table_2_caption.txt": "Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; behavioral alignment score measures whether cautious and overconfident prompt interventions move confidence in the intended direction relative to neutral prompting.\n",
+        "table_3_caption.txt": "Table 3. Dataset-level calibration metrics by model. Metrics are computed on judged generations from the shared question-ID analysis set and include ECE, AURC, and behavioral alignment score.\n",
+        "table_4_caption.txt": "Table 4. Prompt-condition calibration metrics. Expected calibration error, AURC, and high-confidence wrong rate quantify sensitivity to cautious, neutral, and overconfident prompting.\n",
         "table_5_caption.txt": "Table 5. Representative cases selected for qualitative audit. Correctness reflects the saved LLM-as-judge result and should be manually adjudicated before being used as final qualitative evidence.\n",
     }
     for filename, caption in captions.items():
@@ -408,7 +454,7 @@ Correctness labels come from `analysis/llm_as_judge/llm_as_judge.py`. Numeric an
 
 ## Metric Definitions
 
-Accuracy is the fraction of judged generations marked correct. Mean confidence is the arithmetic mean of verbalized confidence. Expected calibration error (ECE) uses {ECE_BINS} equal-width confidence bins and weights each absolute bin accuracy-confidence gap by bin frequency. Brier score is the mean squared error between confidence and correctness. Area under the receiver operating characteristic curve (AUROC) is the Mann-Whitney probability that a correct generation receives higher confidence than an incorrect generation, with half credit for ties. High-confidence wrong rate is the fraction of all evaluated generations that are incorrect with confidence >= {HIGH_CONFIDENCE_THRESHOLD:.2f}. Parse success is parsed rows divided by raw rows for each model.
+Accuracy is the fraction of judged generations marked correct. Mean confidence is the arithmetic mean of verbalized confidence. Expected calibration error (ECE) uses {ECE_BINS} equal-width confidence bins and weights each absolute bin accuracy-confidence gap by bin frequency. Area under the risk-coverage curve (AURC) sorts generations from highest to lowest confidence, computes the cumulative error rate at each coverage level, and averages those risks; lower AURC indicates better confidence-based selective prediction. Behavioral alignment score (BAS) is the fraction of paired prompt interventions where cautious prompting gives confidence less than or equal to neutral confidence and overconfident prompting gives confidence greater than or equal to neutral confidence for the same model, question, and sample index. Brier score is the mean squared error between confidence and correctness. Area under the receiver operating characteristic curve (AUROC) is the Mann-Whitney probability that a correct generation receives higher confidence than an incorrect generation, with half credit for ties. High-confidence wrong rate is the fraction of all evaluated generations that are incorrect with confidence >= {HIGH_CONFIDENCE_THRESHOLD:.2f}. Parse success is parsed rows divided by raw rows for each model.
 """
     write_text(DOCS_DIR / "benchmark_spec.md", spec)
 
@@ -452,7 +498,7 @@ def produce_schema_files() -> None:
         },
         "schema_metrics.json": {
             "type": "object",
-            "required": ["model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "brier_score", "area_under_roc", "high_confidence_wrong_rate"],
+            "required": ["model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "area_under_risk_coverage", "behavioral_alignment_score", "brier_score", "area_under_roc", "high_confidence_wrong_rate"],
         },
     }
     for filename, schema in schemas.items():
@@ -460,6 +506,9 @@ def produce_schema_files() -> None:
 
 
 def remove_stale_figure_files() -> None:
+    for suffix in ("*.png", "*.csv", "*.txt"):
+        for path in FIG_DIR.glob(suffix):
+            path.unlink()
     stale_patterns = [
         "ar_pilot_*",
         "figure_1.png",
@@ -470,8 +519,9 @@ def remove_stale_figure_files() -> None:
         "figure_3_prompt_sensitivity*",
     ]
     for pattern in stale_patterns:
-        for path in FIG_DIR.glob(pattern):
-            path.unlink()
+        for directory in [FIG_DIR, FIG_PNG_DIR, FIG_CSV_DIR, FIG_CAPTION_DIR]:
+            for path in directory.glob(pattern):
+                path.unlink()
 
 
 def produce_manifest() -> None:
@@ -486,9 +536,9 @@ def produce_manifest() -> None:
         *sorted(TABLE_DIR.glob("*.csv")),
         *sorted(TABLE_DIR.glob("*.txt")),
         *sorted(QC_DIR.glob("*.csv")),
-        *sorted(FIG_DIR.glob("*.png")),
-        *sorted(FIG_DIR.glob("*.csv")),
-        *sorted(FIG_DIR.glob("*.txt")),
+        *sorted(FIG_PNG_DIR.glob("*.png")),
+        *sorted(FIG_CSV_DIR.glob("*.csv")),
+        *sorted(FIG_CAPTION_DIR.glob("*.txt")),
     ]:
         definitions.append({
             "file_path": str(path.relative_to(ROOT)),
@@ -501,6 +551,7 @@ def produce_manifest() -> None:
     for rel, description in [
         ("analysis/generate_paper_assets.py", "Paper asset generation script"),
         ("analysis/check_review_artifacts.py", "Paper asset validation script"),
+        ("analysis/compute_basic_metrics.py", "Figure 1 and Figure 2 metric rendering helpers"),
         ("analysis/render_figures.py", "Figure rendering helpers"),
         ("analysis/llm_as_judge/llm_as_judge.py", "Canonical LLM-as-judge script"),
     ]:
@@ -516,7 +567,7 @@ def produce_manifest() -> None:
 
 
 def main() -> None:
-    for directory in [TABLE_DIR, FIG_DIR, QC_DIR, DOCS_DIR]:
+    for directory in [TABLE_DIR, FIG_DIR, FIG_PNG_DIR, FIG_CSV_DIR, FIG_CAPTION_DIR, QC_DIR, DOCS_DIR]:
         directory.mkdir(parents=True, exist_ok=True)
 
     remove_stale_figure_files()

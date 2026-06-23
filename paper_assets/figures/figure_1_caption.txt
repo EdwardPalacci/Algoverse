@@ -1,1 +1,0 @@
-Figure 1. Confidence histogram by prompt condition for the autoregressive models. Counts are pooled across Gemini Flash, GPT-4.1-mini, and Grok 4.3 using the current LLM-as-judge generation data.

@@ -1,1 +1,1 @@
-Table 3. Dataset-level calibration metrics by model. Metrics are computed on judged generations from the shared question-ID analysis set.
+Table 3. Dataset-level calibration metrics by model. Metrics are computed on judged generations from the shared question-ID analysis set and include ECE, AURC, and behavioral alignment score.

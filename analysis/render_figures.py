@@ -11,6 +11,9 @@ os.environ.setdefault("XDG_CACHE_HOME", "/tmp")
 
 ROOT = Path(__file__).resolve().parents[1]
 FIG_DIR = ROOT / "paper_assets" / "figures"
+FIG_PNG_DIR = FIG_DIR / "pngs"
+FIG_CSV_DIR = FIG_DIR / "csvs"
+FIG_CAPTION_DIR = FIG_DIR / "captions"
 ECE_BINS = 10
 
 COLORS = {
@@ -67,7 +70,48 @@ def ece(rows: list[dict], bins: int = ECE_BINS) -> float | None:
     return score
 
 
-def reliability_points(rows: list[dict], family: str) -> list[tuple[float, float]]:
+def aurc(rows: list[dict]) -> float | None:
+    usable = [
+        row for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is not None
+    ]
+    if not usable:
+        return None
+    ranked = sorted(usable, key=lambda row: row["parsed_confidence"], reverse=True)
+    errors = 0
+    risks = []
+    for index, row in enumerate(ranked, start=1):
+        if row["correct_auto"] is False:
+            errors += 1
+        risks.append(errors / index)
+    return mean(risks)
+
+
+def behavioral_alignment_score(rows: list[dict]) -> float | None:
+    by_key: dict[tuple[str, str, int], dict[str, float]] = {}
+    for row in rows:
+        if row.get("parsed_confidence") is None:
+            continue
+        key = (
+            row.get("model_id", row.get("model_name", "")),
+            row.get("question_id", ""),
+            int(row.get("sample_id", 0)),
+        )
+        by_key.setdefault(key, {})[row.get("prompt_condition", "")] = row["parsed_confidence"]
+    checks = []
+    for condition_values in by_key.values():
+        neutral = condition_values.get("neutral")
+        if neutral is None:
+            continue
+        if "cautious" in condition_values:
+            checks.append(1.0 if condition_values["cautious"] <= neutral else 0.0)
+        if "overconfident" in condition_values:
+            checks.append(1.0 if condition_values["overconfident"] >= neutral else 0.0)
+    return mean(checks)
+
+
+def reliability_points(rows: list[dict], family: str) -> list[tuple[float, float, int]]:
     points = []
     family_rows = [
         row for row in rows
@@ -85,6 +129,7 @@ def reliability_points(rows: list[dict], family: str) -> list[tuple[float, float
             points.append((
                 mean(row["parsed_confidence"] for row in bucket),
                 mean(1.0 if row["correct_auto"] else 0.0 for row in bucket),
+                len(bucket),
             ))
     return points
 
@@ -306,16 +351,17 @@ def write_reliability_figure(path: Path, rows: list[dict]) -> list[dict]:
     labels = [("AR", "Autoregressive (AR)"), ("DLM", "Diffusion language model (DLM)")]
     for family, label in labels:
         points = sorted(reliability_points(rows, family))
-        coords = [scale_point(x, y, left, right, top, bottom) for x, y in points]
+        coords = [scale_point(x, y, left, right, top, bottom) for x, y, _count in points]
         for (px, py), (qx, qy) in zip(coords, coords[1:]):
             fig.line(px, py, qx, qy, COLORS[label], 2.2)
-        for mean_confidence, empirical_accuracy in points:
+        for mean_confidence, empirical_accuracy, bin_count in points:
             x, y = scale_point(mean_confidence, empirical_accuracy, left, right, top, bottom)
             fig.circle(x, y, 4.2, COLORS[label])
             output.append({
                 "model_family": family,
                 "mean_confidence": mean_confidence,
                 "empirical_accuracy": empirical_accuracy,
+                "bin_count": bin_count,
             })
     draw_legend(fig, [label for _, label in labels], 690, 88)
     fig.text(690, 180, "Dashed line: perfect calibration", 13)
@@ -329,74 +375,98 @@ def prompt_sensitivity_data(rows: list[dict]) -> list[dict]:
         for condition in ["cautious", "neutral", "overconfident"]:
             subset = [row for row in rows if row["model_family"] == family and row["prompt_condition"] == condition]
             output.append({
+                "metric": "ECE",
                 "model_family": family,
                 "prompt_condition": condition,
-                "expected_calibration_error": ece(subset) or 0.0,
+                "value": ece(subset) or 0.0,
                 "N": len(subset),
             })
+            output.append({
+                "metric": "AURC",
+                "model_family": family,
+                "prompt_condition": condition,
+                "value": aurc(subset) or 0.0,
+                "N": len(subset),
+            })
+        family_rows = [row for row in rows if row["model_family"] == family]
+        output.append({
+            "metric": "BAS",
+            "model_family": family,
+            "prompt_condition": "all",
+            "value": behavioral_alignment_score(family_rows) or 0.0,
+            "N": len(family_rows),
+        })
     return output
 
 
 def write_prompt_sensitivity_figure(path: Path, rows: list[dict]) -> list[dict]:
-    left, right, top, bottom = 92, 720, 72, 440
-    fig = CairoFigure(path)
-    fig.text(92, 34, "Prompt sensitivity in expected calibration error", 20, bold=True)
-    for index in range(6):
-        value = index / 5
-        y = bottom - value * (bottom - top)
-        fig.line(left, y, right, y, "#dddddd", 0.8)
-        fig.text(left - 12, y + 4, f"{value:.1f}", 12, "#444444", align="right")
-    fig.line(left, bottom, right, bottom)
-    fig.line(left, top, left, bottom)
-    fig.text((left + right) / 2, bottom + 58, "Prompt condition", 15, align="center")
-    fig.text(28, (top + bottom) / 2, "Expected calibration error", 15, align="center", rotate=-math.pi / 2)
+    fig = CairoFigure(path, width=1220, height=540)
+    fig.text(72, 34, "Prompt intervention metrics", 20, bold=True)
     data = prompt_sensitivity_data(rows)
-    prompt_order = ["cautious", "neutral", "overconfident"]
-    families = [("AR", "Autoregressive (AR)"), ("DLM", "Diffusion language model (DLM)")]
-    slot = (right - left) / len(prompt_order)
-    bar_width = slot / 4
-    for family_index, (family, label) in enumerate(families):
-        for condition_index, condition in enumerate(prompt_order):
-            value = next(row["expected_calibration_error"] for row in data if row["model_family"] == family and row["prompt_condition"] == condition)
-            x = left + condition_index * slot + (family_index + 1) * bar_width
-            y = bottom - value * (bottom - top)
-            fig.rect(x, y, bar_width, bottom - y, COLORS[label])
-    for condition_index, condition in enumerate(prompt_order):
-        x = left + condition_index * slot + slot / 2
-        fig.text(x, bottom + 24, condition, 12, "#444444", align="center")
-    draw_legend(fig, [label for _, label in families], 742, 86)
+    draw_metric_panel(fig, data, "ECE", "Expected calibration error", 72, 380, 80, 420, 0.30, ["cautious", "neutral", "overconfident"])
+    draw_metric_panel(fig, data, "AURC", "Area under risk-coverage", 452, 760, 80, 420, 0.30, ["cautious", "neutral", "overconfident"])
+    draw_metric_panel(fig, data, "BAS", "Behavioral alignment score", 832, 1120, 80, 420, 1.00, ["all"])
+    draw_legend(fig, ["Autoregressive (AR)", "Diffusion language model (DLM)"], 820, 482)
     fig.write()
     return data
 
 
+def draw_metric_panel(fig: CairoFigure, data: list[dict], metric: str, title: str, left: int, right: int, top: int, bottom: int, y_max: float, categories: list[str]) -> None:
+    fig.text((left + right) / 2, top - 24, title, 14, align="center", bold=True)
+    for index in range(4):
+        value = y_max * index / 3
+        y = bottom - (value / y_max) * (bottom - top)
+        fig.line(left, y, right, y, "#dddddd", 0.8)
+        fig.text(left - 10, y + 4, f"{value:.2f}", 10, "#444444", align="right")
+    fig.line(left, bottom, right, bottom)
+    fig.line(left, top, left, bottom)
+    families = [("AR", "Autoregressive (AR)"), ("DLM", "Diffusion language model (DLM)")]
+    slot = (right - left) / len(categories)
+    bar_width = slot / 4
+    for family_index, (family, label) in enumerate(families):
+        for category_index, category in enumerate(categories):
+            value = next(
+                row["value"] for row in data
+                if row["metric"] == metric
+                and row["model_family"] == family
+                and row["prompt_condition"] == category
+            )
+            x = left + category_index * slot + (family_index + 1) * bar_width
+            y = bottom - min(value / y_max, 1.0) * (bottom - top)
+            fig.rect(x, y, bar_width, bottom - y, COLORS[label])
+    for category_index, category in enumerate(categories):
+        x = left + category_index * slot + slot / 2
+        fig.text(x, bottom + 24, category, 11, "#444444", align="center")
+
+
 def produce_figures(rows: list[dict]) -> None:
-    reliability_data = write_reliability_figure(FIG_DIR / "figure_3_ar_dlm_reliability_diagram.png", rows)
-    write_csv(FIG_DIR / "figure_3_ar_dlm_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy"])
+    reliability_data = write_reliability_figure(FIG_PNG_DIR / "figure_3_ar_dlm_reliability_diagram.png", rows)
+    write_csv(FIG_CSV_DIR / "figure_3_ar_dlm_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy", "bin_count"])
     write_text(
-        FIG_DIR / "figure_3_caption.txt",
-        "Figure 3. AR/DLM reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels.\n",
+        FIG_CAPTION_DIR / "figure_3_caption.txt",
+        "Figure 3. AR/DLM reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels. Bin counts are saved in the companion CSV because sparse bins can produce visually extreme points.\n",
     )
 
-    write_distribution_figure(FIG_DIR / "figure_4_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
+    write_distribution_figure(FIG_PNG_DIR / "figure_4_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
     figure_2_data = confidence_distribution_data(rows)
-    write_csv(FIG_DIR / "figure_4_confidence_by_correctness_data.csv", figure_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
+    write_csv(FIG_CSV_DIR / "figure_4_confidence_by_correctness_data.csv", figure_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
-        FIG_DIR / "figure_4_caption.txt",
+        FIG_CAPTION_DIR / "figure_4_caption.txt",
         "Figure 4. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes the diffusion language model. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
     )
 
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
-    write_distribution_figure(FIG_DIR / "figure_5_confidence_by_correctness_neutral.png", neutral_rows, "Reported confidence by answer outcome: neutral prompt")
+    write_distribution_figure(FIG_PNG_DIR / "figure_5_confidence_by_correctness_neutral.png", neutral_rows, "Reported confidence by answer outcome: neutral prompt")
     neutral_data = confidence_distribution_data(neutral_rows)
-    write_csv(FIG_DIR / "figure_5_confidence_by_correctness_neutral_data.csv", neutral_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
+    write_csv(FIG_CSV_DIR / "figure_5_confidence_by_correctness_neutral_data.csv", neutral_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
-        FIG_DIR / "figure_5_caption.txt",
+        FIG_CAPTION_DIR / "figure_5_caption.txt",
         "Figure 5. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. This neutral-only comparison controls the prompt condition across autoregressive language models (AR) and the diffusion language model (DLM), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
     )
 
-    prompt_data = write_prompt_sensitivity_figure(FIG_DIR / "figure_6_prompt_sensitivity.png", rows)
-    write_csv(FIG_DIR / "figure_6_prompt_sensitivity_data.csv", prompt_data, ["model_family", "prompt_condition", "expected_calibration_error", "N"])
+    prompt_data = write_prompt_sensitivity_figure(FIG_PNG_DIR / "figure_6_prompt_sensitivity.png", rows)
+    write_csv(FIG_CSV_DIR / "figure_6_prompt_sensitivity_data.csv", prompt_data, ["metric", "model_family", "prompt_condition", "value", "N"])
     write_text(
-        FIG_DIR / "figure_6_caption.txt",
-        "Figure 6. Prompt sensitivity measured by expected calibration error. Expected calibration error is computed with 10 equal-width bins of verbalized confidence normalized to [0, 1]. The x-axis gives the prompt condition and the y-axis gives expected calibration error. Bars compare the autoregressive language model (AR) and diffusion language model (DLM) on the shared question-ID analysis set.\n",
+        FIG_CAPTION_DIR / "figure_6_caption.txt",
+        "Figure 6. Prompt intervention metrics comparing autoregressive language models (AR) and the diffusion language model (DLM). ECE is expected calibration error using 10 equal-width confidence bins. AURC is area under the risk-coverage curve, where lower values indicate better confidence-based selective prediction. BAS is behavioral alignment score: the fraction of paired prompt interventions where cautious prompting lowers confidence relative to neutral and overconfident prompting raises confidence relative to neutral.\n",
     )

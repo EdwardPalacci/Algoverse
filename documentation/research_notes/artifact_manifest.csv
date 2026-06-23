@@ -45,25 +45,26 @@ paper_assets/tables/table_5_caption.txt,artifact,Generated benchmark artifact,Re
 paper_assets/tables/quality_control/data_alignment_exclusions.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/quality_control/data_alignment_report.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/quality_control/manual_grading_audit.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_1_confidence_histogram.png,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_2_reliability_diagram.png,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_3_ar_dlm_reliability_diagram.png,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_4_confidence_by_correctness.png,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_5_confidence_by_correctness_neutral.png,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_6_prompt_sensitivity.png,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_1_confidence_histogram_data.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_2_reliability_diagram_data.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_3_ar_dlm_reliability_diagram_data.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_4_confidence_by_correctness_data.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_5_confidence_by_correctness_neutral_data.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_6_prompt_sensitivity_data.csv,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_1_caption.txt,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_2_caption.txt,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_3_caption.txt,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_4_caption.txt,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_5_caption.txt,artifact,Generated benchmark artifact,Results,true,true
-paper_assets/figures/figure_6_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_1_confidence_histogram.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_2_reliability_diagram.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_3_ar_dlm_reliability_diagram.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_4_confidence_by_correctness.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_5_confidence_by_correctness_neutral.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_6_prompt_sensitivity.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_1_confidence_histogram_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_2_reliability_diagram_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_3_ar_dlm_reliability_diagram_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_4_confidence_by_correctness_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_5_confidence_by_correctness_neutral_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_6_prompt_sensitivity_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_1_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_2_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_3_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_4_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_5_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_6_caption.txt,artifact,Generated benchmark artifact,Results,true,true
 analysis/generate_paper_assets.py,code,Paper asset generation script,Artifact,true,true
 analysis/check_review_artifacts.py,code,Paper asset validation script,Artifact,true,true
+analysis/compute_basic_metrics.py,code,Figure 1 and Figure 2 metric rendering helpers,Artifact,true,true
 analysis/render_figures.py,code,Figure rendering helpers,Artifact,true,true
 analysis/llm_as_judge/llm_as_judge.py,code,Canonical LLM-as-judge script,Artifact,true,true

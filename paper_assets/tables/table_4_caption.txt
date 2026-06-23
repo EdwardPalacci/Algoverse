@@ -1,1 +1,1 @@
-Table 4. Prompt-condition calibration metrics. Expected calibration error and high-confidence wrong rate quantify sensitivity to cautious, neutral, and overconfident prompting.
+Table 4. Prompt-condition calibration metrics. Expected calibration error, AURC, and high-confidence wrong rate quantify sensitivity to cautious, neutral, and overconfident prompting.

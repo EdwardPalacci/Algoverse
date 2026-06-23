@@ -1,7 +1,0 @@
-model_family,prompt_condition,expected_calibration_error,N
-AR,cautious,0.17837777777777786,2250
-AR,neutral,0.19895555555555552,2250
-AR,overconfident,0.23235555555555562,2250
-DLM,cautious,0.17607577807848446,750
-DLM,neutral,0.19128900949796462,750
-DLM,overconfident,0.2083940620782725,750

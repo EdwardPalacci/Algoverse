@@ -1,5 +1,5 @@
-model,family,N,accuracy,mean_confidence,expected_calibration_error,brier_score,area_under_roc,high_confidence_wrong_rate,parse_success
-google/gemini-2.5-flash,AR,2250,0.726222,0.973933,0.249489,0.259097,0.549604,0.271556,1.000000
-inception/mercury-2,DLM,2250,0.720444,0.921299,0.191935,0.178601,0.902564,0.112889,0.985333
-openai/gpt-4.1-mini,AR,2250,0.596889,0.950244,0.353356,0.356790,0.616909,0.385778,1.000000
-x-ai/grok-4.3,AR,2250,0.828444,0.829422,0.071244,0.089691,0.893628,0.020000,1.000000
+model,family,N,accuracy,mean_confidence,expected_calibration_error,area_under_risk_coverage,behavioral_alignment_score,brier_score,area_under_roc,high_confidence_wrong_rate,parse_success
+google/gemini-2.5-flash,AR,2250,0.726222,0.973933,0.249489,0.258473,0.968667,0.259097,0.549604,0.271556,1.000000
+inception/mercury-2,DLM,2250,0.720444,0.921299,0.191935,0.076398,0.866667,0.178601,0.902564,0.112889,0.985333
+openai/gpt-4.1-mini,AR,2250,0.596889,0.950244,0.353356,0.332432,0.995333,0.356790,0.616909,0.385778,1.000000
+x-ai/grok-4.3,AR,2250,0.828444,0.829422,0.071244,0.038582,0.910667,0.089691,0.893628,0.020000,1.000000
