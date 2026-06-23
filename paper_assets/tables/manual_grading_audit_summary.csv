@@ -1,7 +1,6 @@
 audit_category,N,agreement_rate,main_issue
 high_confidence_wrong,10,NA,manual adjudication not yet performed
-low_confidence_correct,1,NA,manual adjudication not yet performed
-answer_and_reasoning_mismatch,0,NA,manual adjudication not yet performed
-confidence_changes_without_correctness_changes,10,NA,manual adjudication not yet performed
-ambiguous_grading_case,10,NA,manual adjudication not yet performed
+low_confidence_correct,10,NA,manual adjudication not yet performed
+parse_failure,10,NA,manual adjudication not yet performed
+llm_judged_short_answer,10,NA,manual adjudication not yet performed
 random_example,10,NA,manual adjudication not yet performed

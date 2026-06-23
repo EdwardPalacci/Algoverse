@@ -1,1 +1,1 @@
-Table 1. Benchmark specification by dataset, model, model family, and prompt condition. N is the number of parsed generations in the aligned comparative analysis set.
+Table 1. Benchmark specification by dataset, model, model family, and prompt condition. N is the number of judged generations in the aligned comparative analysis set.

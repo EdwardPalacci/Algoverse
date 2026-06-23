@@ -1,6 +1,34 @@
 file_path,description,row_count
 data/PilotDataset.json,Benchmark item source file,250
-ar_models/model_outputs/ar_raw_generations.jsonl,AR raw model outputs,2250
-ar_models/model_outputs/ar_parsed_generations.jsonl,AR parsed generations,2248
-dlm_models/model_outputs/dlm_raw_generations.jsonl,DLM raw model outputs,2245
-dlm_models/model_outputs/dlm_parsed_generations.jsonl,DLM parsed generations,2101
+ar_models/model_outputs/raw_by_model/google__gemini-2.5-flash.jsonl,Generated model or judge output,2250
+ar_models/model_outputs/raw_by_model/openai__gpt-4.1-mini.jsonl,Generated model or judge output,2250
+ar_models/model_outputs/raw_by_model/x-ai__grok-4.3.jsonl,Generated model or judge output,2250
+ar_models/model_outputs/parsed_by_model/google__gemini-2.5-flash.jsonl,Generated model or judge output,2250
+ar_models/model_outputs/parsed_by_model/openai__gpt-4.1-mini.jsonl,Generated model or judge output,2250
+ar_models/model_outputs/parsed_by_model/x-ai__grok-4.3.jsonl,Generated model or judge output,2250
+analysis/llm_as_judge/results/ar/by_model/google__gemini-2.5-flash/all_datasets.jsonl,Generated model or judge output,2250
+analysis/llm_as_judge/results/ar/by_model/google__gemini-2.5-flash/by_dataset/GSM8K.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/google__gemini-2.5-flash/by_dataset/MedQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/google__gemini-2.5-flash/by_dataset/SimpleQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/google__gemini-2.5-flash/by_dataset/TriviaQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/google__gemini-2.5-flash/by_dataset/TruthfulQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/openai__gpt-4.1-mini/all_datasets.jsonl,Generated model or judge output,2250
+analysis/llm_as_judge/results/ar/by_model/openai__gpt-4.1-mini/by_dataset/GSM8K.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/openai__gpt-4.1-mini/by_dataset/MedQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/openai__gpt-4.1-mini/by_dataset/SimpleQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/openai__gpt-4.1-mini/by_dataset/TriviaQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/openai__gpt-4.1-mini/by_dataset/TruthfulQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/x-ai__grok-4.3/all_datasets.jsonl,Generated model or judge output,2250
+analysis/llm_as_judge/results/ar/by_model/x-ai__grok-4.3/by_dataset/GSM8K.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/x-ai__grok-4.3/by_dataset/MedQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/x-ai__grok-4.3/by_dataset/SimpleQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/x-ai__grok-4.3/by_dataset/TriviaQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/ar/by_model/x-ai__grok-4.3/by_dataset/TruthfulQA.jsonl,Generated model or judge output,450
+dlm_models/model_outputs/raw_by_model/inception__mercury-2.jsonl,Generated model or judge output,2250
+dlm_models/model_outputs/parsed_by_model/inception__mercury-2.jsonl,Generated model or judge output,2250
+analysis/llm_as_judge/results/dlm/by_model/inception__mercury-2/all_datasets.jsonl,Generated model or judge output,2250
+analysis/llm_as_judge/results/dlm/by_model/inception__mercury-2/by_dataset/GSM8K.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/dlm/by_model/inception__mercury-2/by_dataset/MedQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/dlm/by_model/inception__mercury-2/by_dataset/SimpleQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/dlm/by_model/inception__mercury-2/by_dataset/TriviaQA.jsonl,Generated model or judge output,450
+analysis/llm_as_judge/results/dlm/by_model/inception__mercury-2/by_dataset/TruthfulQA.jsonl,Generated model or judge output,450

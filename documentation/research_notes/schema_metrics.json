@@ -1,79 +1,14 @@
 {
   "type": "object",
   "required": [
-    "model_id",
-    "model_family",
-    "prompt_condition",
-    "dataset",
+    "model",
+    "family",
     "N",
     "accuracy",
     "mean_confidence",
     "expected_calibration_error",
     "brier_score",
     "area_under_roc",
-    "high_confidence_wrong_rate",
-    "parse_success"
-  ],
-  "properties": {
-    "N": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "accuracy": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    },
-    "mean_confidence": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    },
-    "expected_calibration_error": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    },
-    "brier_score": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    },
-    "area_under_roc": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    },
-    "high_confidence_wrong_rate": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    },
-    "parse_success": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "maximum": 1
-    }
-  }
+    "high_confidence_wrong_rate"
+  ]
 }

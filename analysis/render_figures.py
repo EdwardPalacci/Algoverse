@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import csv
 import ctypes
+import ctypes.util
 import math
 import os
+import shutil
 from pathlib import Path
 
-from file_io import write_csv, write_text
-from compute_metrics import ece, reliability_points
-from project_paths import ECE_BINS, FIG_DIR
-
-
 os.environ.setdefault("XDG_CACHE_HOME", "/tmp")
+
+ROOT = Path(__file__).resolve().parents[1]
+FIG_DIR = ROOT / "paper_assets" / "figures"
+ECE_BINS = 10
 
 COLORS = {
     "Autoregressive (AR)": "#2f65a7",
@@ -20,6 +22,72 @@ COLORS = {
     "DLM: correct answers": "#c45a3c",
     "DLM: wrong answers": "#e6a18a",
 }
+
+
+def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key, "") for key in fieldnames})
+
+
+def write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def mean(values) -> float | None:
+    values = list(values)
+    return sum(values) / len(values) if values else None
+
+
+def ece(rows: list[dict], bins: int = ECE_BINS) -> float | None:
+    usable = [
+        row for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is not None
+    ]
+    if not usable:
+        return None
+    total = len(usable)
+    score = 0.0
+    for bin_index in range(bins):
+        low = bin_index / bins
+        high = (bin_index + 1) / bins
+        if bin_index == bins - 1:
+            bucket = [row for row in usable if low <= row["parsed_confidence"] <= high]
+        else:
+            bucket = [row for row in usable if low <= row["parsed_confidence"] < high]
+        if not bucket:
+            continue
+        bucket_accuracy = mean(1.0 if row["correct_auto"] else 0.0 for row in bucket)
+        bucket_confidence = mean(row["parsed_confidence"] for row in bucket)
+        score += (len(bucket) / total) * abs(bucket_accuracy - bucket_confidence)
+    return score
+
+
+def reliability_points(rows: list[dict], family: str) -> list[tuple[float, float]]:
+    points = []
+    family_rows = [
+        row for row in rows
+        if row["model_family"] == family
+        and row.get("parsed_confidence") is not None
+    ]
+    for bin_index in range(ECE_BINS):
+        low = bin_index / ECE_BINS
+        high = (bin_index + 1) / ECE_BINS
+        if bin_index == ECE_BINS - 1:
+            bucket = [row for row in family_rows if low <= row["parsed_confidence"] <= high]
+        else:
+            bucket = [row for row in family_rows if low <= row["parsed_confidence"] < high]
+        if bucket:
+            points.append((
+                mean(row["parsed_confidence"] for row in bucket),
+                mean(1.0 if row["correct_auto"] else 0.0 for row in bucket),
+            ))
+    return points
 
 
 def color_rgb(hex_color: str) -> tuple[float, float, float]:
@@ -47,111 +115,106 @@ class CairoTextExtents(ctypes.Structure):
 
 
 class CairoFigure:
-    """Tiny PNG drawing helper backed by the system Cairo library."""
-
-    FORMAT_ARGB32 = 0
-    FONT_SLANT_NORMAL = 0
-    FONT_WEIGHT_NORMAL = 0
-    FONT_WEIGHT_BOLD = 1
+    """Tiny PNG drawing helper backed by Pillow."""
 
     def __init__(self, path: Path, width: int = 900, height: int = 560) -> None:
         self.path = path
-        self.cairo = ctypes.CDLL("libcairo.so.2")
-        self._bind_cairo()
-        self.surface = self.cairo.cairo_image_surface_create(self.FORMAT_ARGB32, width, height)
-        self.cr = self.cairo.cairo_create(self.surface)
-        self.set_rgb("#ffffff")
-        self.cairo.cairo_paint(self.cr)
+        from PIL import Image, ImageDraw, ImageFont
 
-    def _bind_cairo(self) -> None:
-        c = self.cairo
-        c.cairo_image_surface_create.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
-        c.cairo_image_surface_create.restype = ctypes.c_void_p
-        c.cairo_create.argtypes = [ctypes.c_void_p]
-        c.cairo_create.restype = ctypes.c_void_p
-        c.cairo_destroy.argtypes = [ctypes.c_void_p]
-        c.cairo_surface_destroy.argtypes = [ctypes.c_void_p]
-        c.cairo_set_source_rgb.argtypes = [ctypes.c_void_p, ctypes.c_double, ctypes.c_double, ctypes.c_double]
-        c.cairo_paint.argtypes = [ctypes.c_void_p]
-        c.cairo_rectangle.argtypes = [ctypes.c_void_p, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double]
-        c.cairo_fill.argtypes = [ctypes.c_void_p]
-        c.cairo_move_to.argtypes = [ctypes.c_void_p, ctypes.c_double, ctypes.c_double]
-        c.cairo_line_to.argtypes = [ctypes.c_void_p, ctypes.c_double, ctypes.c_double]
-        c.cairo_stroke.argtypes = [ctypes.c_void_p]
-        c.cairo_set_line_width.argtypes = [ctypes.c_void_p, ctypes.c_double]
-        c.cairo_set_dash.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double), ctypes.c_int, ctypes.c_double]
-        c.cairo_arc.argtypes = [ctypes.c_void_p, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double]
-        c.cairo_select_font_face.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
-        c.cairo_set_font_size.argtypes = [ctypes.c_void_p, ctypes.c_double]
-        c.cairo_show_text.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-        c.cairo_text_extents.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(CairoTextExtents)]
-        c.cairo_save.argtypes = [ctypes.c_void_p]
-        c.cairo_restore.argtypes = [ctypes.c_void_p]
-        c.cairo_translate.argtypes = [ctypes.c_void_p, ctypes.c_double, ctypes.c_double]
-        c.cairo_rotate.argtypes = [ctypes.c_void_p, ctypes.c_double]
-        c.cairo_surface_write_to_png.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-        c.cairo_surface_write_to_png.restype = ctypes.c_int
+        self.image = Image.new("RGB", (width, height), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.Image = Image
+        self.ImageDraw = ImageDraw
+        self.ImageFont = ImageFont
 
     def set_rgb(self, color: str) -> None:
-        self.cairo.cairo_set_source_rgb(self.cr, *color_rgb(color))
+        self.color = self._rgb(color)
+
+    def _rgb(self, color: str) -> tuple[int, int, int]:
+        color = color.lstrip("#")
+        return (
+            int(color[0:2], 16),
+            int(color[2:4], 16),
+            int(color[4:6], 16),
+        )
+
+    def _font(self, size: float, bold: bool = False):
+        candidates = [
+            "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
+        ]
+        for candidate in candidates:
+            try:
+                return self.ImageFont.truetype(candidate, int(size))
+            except Exception:
+                pass
+        return self.ImageFont.load_default()
 
     def line(self, x0: float, y0: float, x1: float, y1: float, color: str = "#333333", width: float = 1.2, dash: tuple[float, ...] = ()) -> None:
-        self.set_rgb(color)
-        self.cairo.cairo_set_line_width(self.cr, width)
-        if dash:
-            arr = (ctypes.c_double * len(dash))(*dash)
-            self.cairo.cairo_set_dash(self.cr, arr, len(dash), 0)
-        else:
-            self.cairo.cairo_set_dash(self.cr, None, 0, 0)
-        self.cairo.cairo_move_to(self.cr, x0, y0)
-        self.cairo.cairo_line_to(self.cr, x1, y1)
-        self.cairo.cairo_stroke(self.cr)
-        self.cairo.cairo_set_dash(self.cr, None, 0, 0)
+        fill = self._rgb(color)
+        width_i = max(1, int(round(width)))
+        if not dash:
+            self.draw.line((x0, y0, x1, y1), fill=fill, width=width_i)
+            return
+        dx = x1 - x0
+        dy = y1 - y0
+        length = math.hypot(dx, dy)
+        if length == 0:
+            return
+        ux = dx / length
+        uy = dy / length
+        position = 0.0
+        dash_on = True
+        dash_index = 0
+        while position < length:
+            segment = dash[dash_index % len(dash)]
+            end = min(length, position + segment)
+            if dash_on:
+                self.draw.line(
+                    (
+                        x0 + ux * position,
+                        y0 + uy * position,
+                        x0 + ux * end,
+                        y0 + uy * end,
+                    ),
+                    fill=fill,
+                    width=width_i,
+                )
+            position = end
+            dash_on = not dash_on
+            dash_index += 1
 
     def rect(self, x: float, y: float, width: float, height: float, color: str) -> None:
-        self.set_rgb(color)
-        self.cairo.cairo_rectangle(self.cr, x, y, width, height)
-        self.cairo.cairo_fill(self.cr)
+        self.draw.rectangle((x, y, x + width, y + height), fill=self._rgb(color))
 
     def circle(self, x: float, y: float, radius: float, color: str) -> None:
-        self.set_rgb(color)
-        self.cairo.cairo_arc(self.cr, x, y, radius, 0, 2 * math.pi)
-        self.cairo.cairo_fill(self.cr)
+        self.draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=self._rgb(color))
 
     def text(self, x: float, y: float, value: str, size: float = 12, color: str = "#222222", align: str = "left", bold: bool = False, rotate: float = 0) -> None:
-        encoded = str(value).encode("utf-8")
-        self.cairo.cairo_save(self.cr)
-        self.set_rgb(color)
-        self.cairo.cairo_select_font_face(
-            self.cr,
-            b"DejaVu Sans",
-            self.FONT_SLANT_NORMAL,
-            self.FONT_WEIGHT_BOLD if bold else self.FONT_WEIGHT_NORMAL,
-        )
-        self.cairo.cairo_set_font_size(self.cr, size)
-        ext = CairoTextExtents()
-        self.cairo.cairo_text_extents(self.cr, encoded, ctypes.byref(ext))
-        dx = 0
+        text = str(value)
+        font = self._font(size, bold)
+        bbox = self.draw.textbbox((0, 0), text, font=font)
+        width = bbox[2] - bbox[0]
+        height = bbox[3] - bbox[1]
+        dx = 0.0
         if align == "center":
-            dx = -ext.width / 2 - ext.x_bearing
+            dx = -width / 2
         elif align == "right":
-            dx = -ext.width - ext.x_bearing
+            dx = -width
+        fill = self._rgb(color)
         if rotate:
-            self.cairo.cairo_translate(self.cr, x, y)
-            self.cairo.cairo_rotate(self.cr, rotate)
-            self.cairo.cairo_move_to(self.cr, dx, 0)
+            pad = 8
+            tile = self.Image.new("RGBA", (width + 2 * pad, height + 2 * pad), (255, 255, 255, 0))
+            tile_draw = self.ImageDraw.Draw(tile)
+            tile_draw.text((pad, pad), text, font=font, fill=fill + (255,))
+            rotated = tile.rotate(-math.degrees(rotate), expand=True, resample=self.Image.Resampling.BICUBIC)
+            self.image.paste(rotated.convert("RGB"), (int(x + dx - rotated.width / 2), int(y - rotated.height / 2)), rotated)
         else:
-            self.cairo.cairo_move_to(self.cr, x + dx, y)
-        self.cairo.cairo_show_text(self.cr, encoded)
-        self.cairo.cairo_restore(self.cr)
+            self.draw.text((x + dx, y - height), text, fill=fill, font=font)
 
     def write(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        status = self.cairo.cairo_surface_write_to_png(self.surface, str(self.path).encode("utf-8"))
-        self.cairo.cairo_destroy(self.cr)
-        self.cairo.cairo_surface_destroy(self.surface)
-        if status != 0:
-            raise RuntimeError(f"failed to write PNG {self.path}")
+        self.image.save(self.path)
 
 
 def draw_common_axes(fig: CairoFigure, left: int, right: int, top: int, bottom: int, x_label: str, y_label: str) -> None:
@@ -185,7 +248,12 @@ def confidence_distribution_data(rows: list[dict]) -> list[dict]:
         ("DLM", False, "DLM: wrong answers"),
     ]
     for family, is_correct, label in groups:
-        subset = [row for row in rows if row["model_family"] == family and row["correct_auto"] is is_correct]
+        subset = [
+            row for row in rows
+            if row["model_family"] == family
+            and row["correct_auto"] is is_correct
+            and row.get("parsed_confidence") is not None
+        ]
         denominator = len(subset) or 1
         for bin_index in range(ECE_BINS):
             low = bin_index / ECE_BINS
@@ -304,18 +372,20 @@ def write_prompt_sensitivity_figure(path: Path, rows: list[dict]) -> list[dict]:
 
 def produce_figures(rows: list[dict]) -> None:
     reliability_data = write_reliability_figure(FIG_DIR / "figure_1_reliability_diagram.png", rows)
+    shutil.copyfile(FIG_DIR / "figure_1_reliability_diagram.png", FIG_DIR / "figure_1.png")
     write_csv(FIG_DIR / "figure_1_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy"])
     write_text(
         FIG_DIR / "figure_1_caption.txt",
-        "Figure 1. Reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare qwen/qwen-2.5-7b-instruct, an autoregressive language model (AR), and mercury-2, a diffusion language model (DLM), using deterministic rule-based correctness labels.\n",
+        "Figure 1. Reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels.\n",
     )
 
     write_distribution_figure(FIG_DIR / "figure_2_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
+    shutil.copyfile(FIG_DIR / "figure_2_confidence_by_correctness.png", FIG_DIR / "figure_2.png")
     figure_2_data = confidence_distribution_data(rows)
     write_csv(FIG_DIR / "figure_2_confidence_by_correctness_data.csv", figure_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
         FIG_DIR / "figure_2_caption.txt",
-        "Figure 2. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the deterministic rule-based grader described in the benchmark specification. AR denotes the autoregressive language model and DLM denotes the diffusion language model. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
+        "Figure 2. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes the diffusion language model. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
     )
 
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
@@ -324,7 +394,7 @@ def produce_figures(rows: list[dict]) -> None:
     write_csv(FIG_DIR / "figure_2_2_confidence_by_correctness_neutral_data.csv", figure_2_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
         FIG_DIR / "figure_2_2_caption.txt",
-        "Figure 2.2. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the deterministic rule-based grader described in the benchmark specification. This neutral-only comparison controls the prompt condition across the autoregressive language model (AR) and diffusion language model (DLM), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
+        "Figure 2.2. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. This neutral-only comparison controls the prompt condition across autoregressive language models (AR) and the diffusion language model (DLM), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
     )
 
     prompt_data = write_prompt_sensitivity_figure(FIG_DIR / "figure_3_prompt_sensitivity.png", rows)

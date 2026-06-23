@@ -1,0 +1,9 @@
+check_name,status,n_affected,details
+same_question_id_set_raw_sources,pass,0,AR-only=0; DLM-only=0
+same_question_id_set_comparative_analysis,pass,0,250 shared question_id values used for comparative tables and figures
+duplicate_full_evaluation_keys_within_source,pass,0,source_file + question_id + condition + sample_id
+valid_dataset,pass,0,
+valid_model_family,pass,0,
+valid_prompt_condition,pass,0,
+confidence_normalized_0_1_or_parse_failure,pass,0,
+correctness_binary_llm_judge_label,pass,0,

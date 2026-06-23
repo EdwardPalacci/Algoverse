@@ -3,41 +3,8 @@
   "required": [
     "question_id",
     "dataset",
-    "split",
     "question",
-    "gold_answer",
-    "answer_type",
-    "domain",
-    "source",
-    "license"
-  ],
-  "properties": {
-    "question_id": {
-      "type": "string"
-    },
-    "dataset": {
-      "type": "string"
-    },
-    "split": {
-      "type": "string"
-    },
-    "question": {
-      "type": "string"
-    },
-    "gold_answer": {
-      "type": "string"
-    },
-    "answer_type": {
-      "type": "string"
-    },
-    "domain": {
-      "type": "string"
-    },
-    "source": {
-      "type": "string"
-    },
-    "license": {
-      "type": "string"
-    }
-  }
+    "ground_truth",
+    "answer_type"
+  ]
 }

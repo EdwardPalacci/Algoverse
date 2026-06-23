@@ -1261,13 +1261,13 @@ def build_parser():
 
     parser.add_argument(
         "--raw-output",
-        default="dlm_models/model_outputs/dlm_raw_generations.jsonl",
+        default="dlm_models/model_outputs/raw_by_model/inception__mercury-2.jsonl",
         help="Raw response output path"
     )
 
     parser.add_argument(
         "--parsed-output",
-        default="dlm_models/model_outputs/dlm_parsed_generations.jsonl",
+        default="dlm_models/model_outputs/parsed_by_model/inception__mercury-2.jsonl",
         help="Parsed response output path"
     )
 

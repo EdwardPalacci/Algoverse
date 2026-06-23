@@ -1,4 +1,0 @@
-question_id,excluded_from,reason
-SimpleQA_0008,comparative_tables,AR-only question_id
-SimpleQA_1625,comparative_tables,AR-only question_id
-TruthfulQA_0562,comparative_tables,AR-only question_id

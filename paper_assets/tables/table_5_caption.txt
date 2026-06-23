@@ -1,1 +1,1 @@
-Table 5. Representative cases selected for qualitative audit. Correctness reflects deterministic automatic grading and should be adjudicated before being used as final qualitative evidence.
+Table 5. Representative cases selected for qualitative audit. Correctness reflects the saved LLM-as-judge result and should be manually adjudicated before being used as final qualitative evidence.

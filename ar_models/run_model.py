@@ -929,6 +929,22 @@ def generation_key(model_name, question_id, condition, sample_id):
     )
 
 
+def safe_model_filename(model_name):
+
+    return re.sub(r"[^A-Za-z0-9._-]+", "__", model_name).strip("_")
+
+
+def output_path_for_model(configured_path, model_name, output_kind):
+
+    if configured_path:
+        return Path(configured_path)
+
+    return Path(
+        f"ar_models/model_outputs/{output_kind}_by_model/"
+        f"{safe_model_filename(model_name)}.jsonl"
+    )
+
+
 def generation_key_from_record(record):
 
     return generation_key(
@@ -1227,19 +1243,7 @@ def run(args):
     models = args.models or ([args.model] if args.model else DEFAULT_AR_MODELS)
     clients_by_provider = {}
 
-    raw_output_path = Path(args.raw_output)
-    parsed_output_path = Path(args.parsed_output)
     error_log_path = Path(args.error_log)
-
-    raw_output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    parsed_output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
 
     error_log_path.parent.mkdir(
         parents=True,
@@ -1248,13 +1252,28 @@ def run(args):
 
     total_generations = 0
 
-    with (
-        raw_output_path.open("a", encoding="utf-8") as raw_f,
-        parsed_output_path.open("a", encoding="utf-8") as parsed_f,
-        error_log_path.open("a", encoding="utf-8") as err_f
-    ):
+    with error_log_path.open("a", encoding="utf-8") as err_f:
 
         for model_name in models:
+
+            raw_output_path = output_path_for_model(
+                args.raw_output,
+                model_name,
+                "raw"
+            )
+            parsed_output_path = output_path_for_model(
+                args.parsed_output,
+                model_name,
+                "parsed"
+            )
+            raw_output_path.parent.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+            parsed_output_path.parent.mkdir(
+                parents=True,
+                exist_ok=True
+            )
 
             provider = provider_for(model_name)
             if provider not in clients_by_provider:
@@ -1265,74 +1284,79 @@ def run(args):
                 f"\nRunning AR model: {model_name} ({provider})"
             )
 
-            for dataset_name in args.datasets:
+            with (
+                raw_output_path.open("a", encoding="utf-8") as raw_f,
+                parsed_output_path.open("a", encoding="utf-8") as parsed_f
+            ):
 
-                dataset = DATASET_LOADERS[dataset_name](
-                    limit=args.max_questions
-                )
+                for dataset_name in args.datasets:
 
-                print(
-                    f"\nLoaded {len(dataset)} questions from {dataset_name}"
-                )
+                    dataset = DATASET_LOADERS[dataset_name](
+                        limit=args.max_questions
+                    )
 
-                for condition in args.conditions:
+                    print(
+                        f"\nLoaded {len(dataset)} questions from {dataset_name}"
+                    )
 
-                    print(f"Running condition: {condition}")
+                    for condition in args.conditions:
 
-                    system_prompt = SYSTEM_PROMPTS[condition]
+                        print(f"Running condition: {condition}")
 
-                    jobs = [
-                        (item, sample_id)
-                        for item in dataset
-                        for sample_id in range(args.n_samples)
-                    ]
+                        system_prompt = SYSTEM_PROMPTS[condition]
 
-                    with ThreadPoolExecutor(
-                        max_workers=max(1, args.concurrency)
-                    ) as executor:
-
-                        futures = [
-                            executor.submit(
-                                run_generation_job,
-                                client,
-                                provider,
-                                model_name,
-                                condition,
-                                system_prompt,
-                                item,
-                                sample_id,
-                                args.temperature,
-                                args.max_tokens,
-                                args.parse_retry_attempts
-                            )
-                            for item, sample_id in jobs
+                        jobs = [
+                            (item, sample_id)
+                            for item in dataset
+                            for sample_id in range(args.n_samples)
                         ]
 
-                        iterator = tqdm(
-                            as_completed(futures),
-                            total=len(futures),
-                            desc=f"{model_name}/{dataset_name}/{condition}"
-                        )
+                        with ThreadPoolExecutor(
+                            max_workers=max(1, args.concurrency)
+                        ) as executor:
 
-                        for future in iterator:
-
-                            raw_record, parsed_record, errors = future.result()
-
-                            if raw_record is not None:
-                                raw_f.write(
-                                    json.dumps(raw_record) + "\n"
+                            futures = [
+                                executor.submit(
+                                    run_generation_job,
+                                    client,
+                                    provider,
+                                    model_name,
+                                    condition,
+                                    system_prompt,
+                                    item,
+                                    sample_id,
+                                    args.temperature,
+                                    args.max_tokens,
+                                    args.parse_retry_attempts
                                 )
-                                raw_f.flush()
+                                for item, sample_id in jobs
+                            ]
 
-                            if parsed_record is not None:
-                                parsed_f.write(
-                                    json.dumps(parsed_record) + "\n"
-                                )
-                                parsed_f.flush()
-                                total_generations += 1
+                            iterator = tqdm(
+                                as_completed(futures),
+                                total=len(futures),
+                                desc=f"{model_name}/{dataset_name}/{condition}"
+                            )
 
-                            for error in errors:
-                                log_error(err_f, error)
+                            for future in iterator:
+
+                                raw_record, parsed_record, errors = future.result()
+
+                                if raw_record is not None:
+                                    raw_f.write(
+                                        json.dumps(raw_record) + "\n"
+                                    )
+                                    raw_f.flush()
+
+                                if parsed_record is not None:
+                                    parsed_f.write(
+                                        json.dumps(parsed_record) + "\n"
+                                    )
+                                    parsed_f.flush()
+                                    total_generations += 1
+
+                                for error in errors:
+                                    log_error(err_f, error)
 
     print("\nRun complete.")
     print(f"Saved {total_generations} parsed generations.")
@@ -1428,14 +1452,20 @@ def build_parser():
 
     parser.add_argument(
         "--raw-output",
-        default="ar_models/model_outputs/ar_raw_generations.jsonl",
-        help="Raw response output path"
+        default=None,
+        help=(
+            "Raw response output path. If omitted, writes one file per model "
+            "under ar_models/model_outputs/raw_by_model/."
+        )
     )
 
     parser.add_argument(
         "--parsed-output",
-        default="ar_models/model_outputs/ar_parsed_generations.jsonl",
-        help="Parsed response output path"
+        default=None,
+        help=(
+            "Parsed response output path. If omitted, writes one file per model "
+            "under ar_models/model_outputs/parsed_by_model/."
+        )
     )
 
     parser.add_argument(

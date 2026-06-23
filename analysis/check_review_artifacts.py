@@ -12,13 +12,14 @@ import csv
 import json
 from pathlib import Path
 
-from load_generation_data import aligned_rows, load_all_rows
+from generate_paper_assets import aligned_rows, load_all_rows
 from render_figures import confidence_distribution_data, prompt_sensitivity_data
-from compute_metrics import reliability_points
-from project_paths import DOCS_DIR, FIG_DIR
+from render_figures import reliability_points
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DOCS_DIR = ROOT / "documentation" / "research_notes"
+FIG_DIR = ROOT / "paper_assets" / "figures"
 
 
 def read_csv(path: Path) -> list[dict]:
