@@ -52,6 +52,11 @@ Required environment variables
 ------------------------------------------------------------
 
 OPENROUTER_API_KEY
+
+Optional environment variables for local OpenAI-compatible servers:
+
+LOCAL_OPENAI_BASE_URL
+LOCAL_OPENAI_API_KEY
 """
 
 import argparse
@@ -79,7 +84,8 @@ DEFAULT_CONCURRENCY = 4
 DEFAULT_PARSE_RETRY_ATTEMPTS = 4
 DEFAULT_MAX_TOKENS = 600
 DEFAULT_TEMPERATURE = 0.0
-REDACTED_SECRET = "[REDACTED_OPENROUTER_API_KEY]"
+REDACTED_SECRET = "[REDACTED_API_KEY]"
+LOCAL_PROVIDER = "local-openai"
 
 RESPONSE_JSON_SCHEMA = {
     "type": "object",
@@ -267,12 +273,13 @@ DATASET_LOADERS = {
 
 class OpenRouterClient:
 
-    def __init__(self, api_key):
+    def __init__(self, api_key, timeout=REQUEST_TIMEOUT_SECONDS):
 
         self.api_key = api_key.strip()
         if not self.api_key:
             raise EnvironmentError("OPENROUTER_API_KEY not set.")
         self.endpoint = "https://openrouter.ai/api/v1/chat/completions"
+        self.timeout = timeout
 
     def chat_completion(self, payload):
 
@@ -291,7 +298,7 @@ class OpenRouterClient:
         try:
             with urllib.request.urlopen(
                 request,
-                timeout=REQUEST_TIMEOUT_SECONDS
+                timeout=self.timeout
             ) as response:
 
                 return json.loads(
@@ -310,23 +317,100 @@ class OpenRouterClient:
             ) from exc
 
 
-def provider_for(model_name):
+class LocalOpenAIClient:
+
+    def __init__(self, base_url, api_key="", timeout=REQUEST_TIMEOUT_SECONDS):
+
+        base_url = (base_url or "").strip().rstrip("/")
+        if not base_url:
+            raise EnvironmentError(
+                "LOCAL_OPENAI_BASE_URL not set. Pass --local-base-url or set the environment variable."
+            )
+
+        if base_url.endswith("/chat/completions"):
+            self.endpoint = base_url
+        elif base_url.endswith("/v1"):
+            self.endpoint = f"{base_url}/chat/completions"
+        else:
+            self.endpoint = f"{base_url}/v1/chat/completions"
+
+        self.api_key = (api_key or "").strip()
+        self.timeout = timeout
+
+    def chat_completion(self, payload):
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        request = urllib.request.Request(
+            self.endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST"
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=self.timeout
+            ) as response:
+
+                return json.loads(
+                    response.read().decode("utf-8")
+                )
+
+        except urllib.error.HTTPError as exc:
+
+            body = exc.read().decode(
+                "utf-8",
+                errors="replace"
+            )
+
+            raise RuntimeError(
+                f"Local OpenAI-compatible server HTTP {exc.code}: {body}"
+            ) from exc
+
+
+def provider_for(model_name, provider_override=None):
+
+    if provider_override:
+        return provider_override
 
     model_name = model_name.lower()
 
     if model_name.startswith("inception/") or "mercury" in model_name:
         return "openrouter"
 
+    local_prefixes = (
+        "dream-org/",
+        "gsai-ml/",
+        "google/diffusiongemma",
+    )
+    if model_name.startswith(local_prefixes):
+        return LOCAL_PROVIDER
+
     raise ValueError(
-        f"run_dlm_model.py only supports Inception DLM models. Got: {model_name}"
+        "Unknown DLM provider for model: "
+        f"{model_name}. Pass --provider openrouter or --provider {LOCAL_PROVIDER}."
     )
 
 
-def build_client(provider):
+def build_client(provider, args):
 
     if provider == "openrouter":
         return OpenRouterClient(
-            api_key=os.environ.get("OPENROUTER_API_KEY", "")
+            api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            timeout=args.request_timeout
+        )
+
+    if provider == LOCAL_PROVIDER:
+        return LocalOpenAIClient(
+            base_url=args.local_base_url or os.environ.get("LOCAL_OPENAI_BASE_URL", ""),
+            api_key=os.environ.get("LOCAL_OPENAI_API_KEY", ""),
+            timeout=args.request_timeout
         )
 
     raise ValueError(f"Unknown provider: {provider}")
@@ -336,16 +420,39 @@ def build_client(provider):
 # Query wrappers
 # ============================================================
 
-def query_openrouter(
-    client,
-    model,
-    system_prompt,
-    user_prompt,
-    temperature,
-    max_tokens
-):
+def extract_chat_content(response):
 
-    request_payload = {
+    choice = response["choices"][0]
+    message = choice.get("message", {})
+    content = message.get("content")
+
+    if content is None and message.get("reasoning"):
+        content = message.get("reasoning")
+
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, dict):
+                parts.append(str(part.get("text") or part.get("content") or ""))
+            else:
+                parts.append(str(part))
+        content = "\n".join(part for part in parts if part)
+
+    if content is not None and str(content).strip():
+        return str(content)
+
+    raise RuntimeError(
+        (
+            "EMPTY RESPONSE CONTENT | "
+            f"finish_reason={choice.get('finish_reason')} | "
+            f"message_keys={sorted(message.keys())}"
+        )
+    )
+
+
+def build_chat_payload(model, system_prompt, user_prompt, temperature, max_tokens):
+
+    return {
         "model": model,
         "messages": [
             {
@@ -359,6 +466,26 @@ def query_openrouter(
         ],
         "temperature": temperature,
         "max_tokens": max_tokens,
+    }
+
+
+def query_openrouter(
+    client,
+    model,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens
+):
+
+    request_payload = {
+        **build_chat_payload(
+            model,
+            system_prompt,
+            user_prompt,
+            temperature,
+            max_tokens
+        ),
         "reasoning": {
             "exclude": True
         },
@@ -398,32 +525,57 @@ def query_openrouter(
                 raise
             continue
 
-        choice = response["choices"][0]
-        message = choice.get("message", {})
-        content = message.get("content")
+        try:
+            return extract_chat_content(response)
+        except Exception as exc:
+            last_error = exc
 
-        if content is None and message.get("reasoning"):
-            content = message.get("reasoning")
+    raise last_error
 
-        if isinstance(content, list):
-            parts = []
-            for part in content:
-                if isinstance(part, dict):
-                    parts.append(str(part.get("text") or part.get("content") or ""))
-                else:
-                    parts.append(str(part))
-            content = "\n".join(part for part in parts if part)
 
-        if content is not None and str(content).strip():
-            return str(content)
+def query_local_openai(
+    client,
+    model,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens
+):
 
-        last_error = RuntimeError(
-            (
-                "EMPTY RESPONSE CONTENT | "
-                f"finish_reason={choice.get('finish_reason')} | "
-                f"message_keys={sorted(message.keys())}"
-            )
-        )
+    request_payload = build_chat_payload(
+        model,
+        system_prompt,
+        user_prompt,
+        temperature,
+        max_tokens
+    )
+
+    request_variants = [
+        {
+            **request_payload,
+            "response_format": {"type": "json_object"}
+        },
+        request_payload
+    ]
+
+    last_error = None
+
+    for payload in request_variants:
+
+        try:
+            response = client.chat_completion(payload)
+
+        except Exception as exc:
+            last_error = exc
+            message = str(exc).lower()
+            if "response_format" not in message and "json" not in message and "structured" not in message:
+                raise
+            continue
+
+        try:
+            return extract_chat_content(response)
+        except Exception as exc:
+            last_error = exc
 
     raise last_error
 
@@ -440,6 +592,16 @@ def query_model(
 
     if provider == "openrouter":
         return query_openrouter(
+            client,
+            model,
+            system_prompt,
+            user_prompt,
+            temperature,
+            max_tokens
+        )
+
+    if provider == LOCAL_PROVIDER:
+        return query_local_openai(
             client,
             model,
             system_prompt,
@@ -714,6 +876,8 @@ def redact_secrets(message):
     for value in {
         os.environ.get("OPENROUTER_API_KEY", ""),
         os.environ.get("OPENROUTER_API_KEY", "").strip(),
+        os.environ.get("LOCAL_OPENAI_API_KEY", ""),
+        os.environ.get("LOCAL_OPENAI_API_KEY", "").strip(),
     }:
 
         if value:
@@ -841,6 +1005,28 @@ def load_existing_records(path):
             records[generation_key_from_record(record)] = record
 
     return records
+
+
+def model_output_stem(model_name):
+
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "__", model_name.strip())
+    stem = stem.strip("._-")
+    return stem or "unknown_model"
+
+
+def default_output_paths(models):
+
+    if len(models) == 1:
+        stem = model_output_stem(models[0])
+        return (
+            Path("dlm_models") / "model_outputs" / "raw_by_model" / f"{stem}.jsonl",
+            Path("dlm_models") / "model_outputs" / "parsed_by_model" / f"{stem}.jsonl",
+        )
+
+    return (
+        Path("dlm_models") / "model_outputs" / "dlm_raw_generations.jsonl",
+        Path("dlm_models") / "model_outputs" / "dlm_parsed_generations.jsonl",
+    )
 
 
 def rewrite_records(path, records):
@@ -996,8 +1182,9 @@ def run(args):
     models = args.models or ([args.model] if args.model else DEFAULT_DLM_MODELS)
     clients_by_provider = {}
 
-    raw_output_path = Path(args.raw_output)
-    parsed_output_path = Path(args.parsed_output)
+    default_raw_output_path, default_parsed_output_path = default_output_paths(models)
+    raw_output_path = Path(args.raw_output) if args.raw_output else default_raw_output_path
+    parsed_output_path = Path(args.parsed_output) if args.parsed_output else default_parsed_output_path
     error_log_path = Path(args.error_log)
 
     raw_output_path.parent.mkdir(
@@ -1037,9 +1224,9 @@ def run(args):
 
         for model_name in models:
 
-            provider = provider_for(model_name)
+            provider = provider_for(model_name, args.provider)
             if provider not in clients_by_provider:
-                clients_by_provider[provider] = build_client(provider)
+                clients_by_provider[provider] = build_client(provider, args)
             client = clients_by_provider[provider]
 
             print(
@@ -1186,6 +1373,28 @@ def build_parser():
     )
 
     parser.add_argument(
+        "--provider",
+        choices=[
+            "openrouter",
+            LOCAL_PROVIDER,
+        ],
+        default=None,
+        help=(
+            "Optional provider override. Use local-openai for a rented GPU server "
+            "exposing /v1/chat/completions."
+        )
+    )
+
+    parser.add_argument(
+        "--local-base-url",
+        default=None,
+        help=(
+            "Base URL for a local OpenAI-compatible server, e.g. "
+            "http://localhost:8000/v1. Can also be set with LOCAL_OPENAI_BASE_URL."
+        )
+    )
+
+    parser.add_argument(
         "--datasets",
         nargs="+",
         default=[
@@ -1234,6 +1443,13 @@ def build_parser():
     )
 
     parser.add_argument(
+        "--request-timeout",
+        type=int,
+        default=REQUEST_TIMEOUT_SECONDS,
+        help="HTTP request timeout in seconds"
+    )
+
+    parser.add_argument(
         "--parse-retry-attempts",
         type=int,
         default=DEFAULT_PARSE_RETRY_ATTEMPTS,
@@ -1261,14 +1477,14 @@ def build_parser():
 
     parser.add_argument(
         "--raw-output",
-        default="dlm_models/model_outputs/raw_by_model/inception__mercury-2.jsonl",
-        help="Raw response output path"
+        default=None,
+        help="Raw response output path. Defaults to raw_by_model/<model>.jsonl for single-model runs."
     )
 
     parser.add_argument(
         "--parsed-output",
-        default="dlm_models/model_outputs/parsed_by_model/inception__mercury-2.jsonl",
-        help="Parsed response output path"
+        default=None,
+        help="Parsed response output path. Defaults to parsed_by_model/<model>.jsonl for single-model runs."
     )
 
     parser.add_argument(
