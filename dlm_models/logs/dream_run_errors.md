@@ -1,0 +1,99 @@
+- [2026-06-26 17:02:44] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0645 | neutral | sample=0
+- [2026-06-26 17:02:50] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0645 | neutral | sample=1
+- [2026-06-26 17:02:57] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0645 | neutral | sample=2
+- [2026-06-26 17:05:32] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0569 | neutral | sample=0
+- [2026-06-26 17:05:38] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0569 | neutral | sample=1
+- [2026-06-26 17:05:45] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0569 | neutral | sample=2
+- [2026-06-26 17:05:52] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0478 | neutral | sample=0
+- [2026-06-26 17:05:57] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0478 | neutral | sample=1
+- [2026-06-26 17:06:04] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0478 | neutral | sample=2
+- [2026-06-26 17:06:10] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0481 | neutral | sample=0
+- [2026-06-26 17:06:16] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0481 | neutral | sample=1
+- [2026-06-26 17:06:22] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0481 | neutral | sample=2
+- [2026-06-26 17:10:34] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0860 | neutral | sample=0
+- [2026-06-26 17:10:41] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0860 | neutral | sample=1
+- [2026-06-26 17:10:47] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0860 | neutral | sample=2
+- [2026-06-26 17:11:12] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1115 | neutral | sample=0
+- [2026-06-26 17:11:19] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1115 | neutral | sample=1
+- [2026-06-26 17:11:25] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1115 | neutral | sample=2
+- [2026-06-26 17:11:31] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1200 | neutral | sample=0
+- [2026-06-26 17:11:38] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1200 | neutral | sample=1
+- [2026-06-26 17:11:44] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1200 | neutral | sample=2
+- [2026-06-26 17:17:38] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0097 | neutral | sample=0
+- [2026-06-26 17:17:45] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0097 | neutral | sample=1
+- [2026-06-26 17:17:52] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0097 | neutral | sample=2
+- [2026-06-26 17:18:41] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0165 | neutral | sample=0
+- [2026-06-26 17:18:48] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0165 | neutral | sample=1
+- [2026-06-26 17:18:55] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0165 | neutral | sample=2
+- [2026-06-26 17:38:39] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3334 | neutral | sample=0
+- [2026-06-26 17:38:46] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3334 | neutral | sample=1
+- [2026-06-26 17:38:52] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3334 | neutral | sample=2
+- [2026-06-26 17:43:57] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | neutral | sample=0 | value=None
+- [2026-06-26 17:44:07] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | neutral | sample=1 | value=None
+- [2026-06-26 17:44:17] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | neutral | sample=2 | value=None
+- [2026-06-26 17:44:25] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | neutral | sample=0
+- [2026-06-26 17:44:33] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | neutral | sample=1
+- [2026-06-26 17:44:39] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | neutral | sample=2
+- [2026-06-26 17:51:06] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0515 | cautious | sample=0
+- [2026-06-26 17:51:12] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0515 | cautious | sample=1
+- [2026-06-26 17:51:19] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0515 | cautious | sample=2
+- [2026-06-26 17:53:17] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0569 | cautious | sample=0 | value=None
+- [2026-06-26 17:53:24] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0569 | cautious | sample=1 | value=None
+- [2026-06-26 17:53:31] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0569 | cautious | sample=2 | value=None
+- [2026-06-26 17:55:51] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0095 | cautious | sample=0
+- [2026-06-26 17:55:57] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0095 | cautious | sample=1
+- [2026-06-26 17:56:05] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0095 | cautious | sample=2
+- [2026-06-26 17:56:50] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0231 | cautious | sample=0
+- [2026-06-26 17:56:57] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0231 | cautious | sample=1
+- [2026-06-26 17:57:03] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0231 | cautious | sample=2
+- [2026-06-26 18:02:47] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_4175 | cautious | sample=0
+- [2026-06-26 18:02:54] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_4175 | cautious | sample=1
+- [2026-06-26 18:03:00] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_4175 | cautious | sample=2
+- [2026-06-26 18:25:42] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_0111 | cautious | sample=0 | value=None
+- [2026-06-26 18:25:48] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_0111 | cautious | sample=1 | value=None
+- [2026-06-26 18:25:55] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_0111 | cautious | sample=2 | value=None
+- [2026-06-26 18:30:39] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_9991 | cautious | sample=0
+- [2026-06-26 18:30:45] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_9991 | cautious | sample=1
+- [2026-06-26 18:30:52] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_9991 | cautious | sample=2
+- [2026-06-26 18:31:08] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | cautious | sample=0
+- [2026-06-26 18:31:15] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | cautious | sample=1
+- [2026-06-26 18:31:22] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | cautious | sample=2
+- [2026-06-26 18:31:28] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | cautious | sample=0
+- [2026-06-26 18:31:35] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | cautious | sample=1
+- [2026-06-26 18:31:41] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | cautious | sample=2
+- [2026-06-26 18:31:48] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_4680 | cautious | sample=0
+- [2026-06-26 18:31:54] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_4680 | cautious | sample=1
+- [2026-06-26 18:32:01] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_4680 | cautious | sample=2
+- [2026-06-26 18:34:54] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0315 | overconfident | sample=0
+- [2026-06-26 18:35:01] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0315 | overconfident | sample=1
+- [2026-06-26 18:35:08] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TruthfulQA_0315 | overconfident | sample=2
+- [2026-06-26 18:43:42] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0136 | overconfident | sample=0
+- [2026-06-26 18:43:48] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0136 | overconfident | sample=1
+- [2026-06-26 18:43:56] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0136 | overconfident | sample=2
+- [2026-06-26 18:45:03] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0354 | overconfident | sample=0
+- [2026-06-26 18:45:09] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0354 | overconfident | sample=1
+- [2026-06-26 18:45:16] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_0354 | overconfident | sample=2
+- [2026-06-26 18:48:00] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1710 | overconfident | sample=0
+- [2026-06-26 18:48:08] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1710 | overconfident | sample=1
+- [2026-06-26 18:48:17] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_1710 | overconfident | sample=2
+- [2026-06-26 18:51:13] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_4175 | overconfident | sample=0
+- [2026-06-26 18:51:21] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_4175 | overconfident | sample=1
+- [2026-06-26 18:51:30] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | SimpleQA_4175 | overconfident | sample=2
+- [2026-06-26 18:58:49] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0695 | overconfident | sample=0
+- [2026-06-26 18:58:56] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0695 | overconfident | sample=1
+- [2026-06-26 18:59:03] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | GSM8K_0695 | overconfident | sample=2
+- [2026-06-26 19:06:24] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | MedQA_0319 | overconfident | sample=0
+- [2026-06-26 19:06:32] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | MedQA_0319 | overconfident | sample=1
+- [2026-06-26 19:06:40] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | MedQA_0319 | overconfident | sample=2
+- [2026-06-26 19:15:46] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_0111 | overconfident | sample=0 | value=None
+- [2026-06-26 19:15:53] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_0111 | overconfident | sample=1 | value=None
+- [2026-06-26 19:15:59] INVALID CONFIDENCE | Dream-org/Dream-v0-Instruct-7B | TriviaQA_0111 | overconfident | sample=2 | value=None
+- [2026-06-26 19:20:43] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | overconfident | sample=0
+- [2026-06-26 19:20:50] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | overconfident | sample=1
+- [2026-06-26 19:20:57] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_2468 | overconfident | sample=2
+- [2026-06-26 19:21:04] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | overconfident | sample=0
+- [2026-06-26 19:21:10] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | overconfident | sample=1
+- [2026-06-26 19:21:17] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_3579 | overconfident | sample=2
+- [2026-06-26 19:21:23] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_4680 | overconfident | sample=0
+- [2026-06-26 19:21:29] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_4680 | overconfident | sample=1
+- [2026-06-26 19:21:36] PARSE ERROR | Dream-org/Dream-v0-Instruct-7B | TriviaQA_4680 | overconfident | sample=2
