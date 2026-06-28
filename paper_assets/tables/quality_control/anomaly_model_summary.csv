@@ -1,0 +1,8 @@
+family,model,model_label,N,accuracy,mean_confidence,parse_failure_count,parse_failure_rate,zero_confidence_count,zero_confidence_rate,high_confidence_count,high_confidence_rate,exact_one_confidence_count,exact_one_confidence_rate,high_confidence_wrong_count,high_confidence_wrong_rate
+AR,google/gemini-2.5-flash,Gemini Flash,2250,0.726222,0.973933,0,0.000000,4,0.001778,2234,0.992889,1704,0.757333,611,0.271556
+AR,openai/gpt-4.1-mini,GPT-4.1 mini,2250,0.596889,0.950244,0,0.000000,0,0.000000,2202,0.978667,931,0.413778,868,0.385778
+AR,x-ai/grok-4.3,Grok,2250,0.828444,0.829422,0,0.000000,2,0.000889,1333,0.592444,33,0.014667,45,0.020000
+DLM,Dream-org/Dream-v0-Instruct-7B,Dream,2250,0.327556,0.814756,99,0.044000,348,0.154667,1635,0.726667,1548,0.688000,1054,0.468444
+DLM,GSAI-ML/LLaDA-8B-Instruct,LLaDA,2250,0.293778,0.972000,0,0.000000,12,0.005333,2223,0.988000,1707,0.758667,1574,0.699556
+DLM,google/diffusiongemma-26B-A4B-it,DiffusionGemma,2250,0.584889,0.981867,0,0.000000,3,0.001333,2243,0.996889,1859,0.826222,927,0.412000
+DLM,inception/mercury-2,Mercury-2,2250,0.720444,0.921299,33,0.014667,4,0.001778,1812,0.805333,141,0.062667,254,0.112889
