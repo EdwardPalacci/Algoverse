@@ -14,7 +14,7 @@ GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA
 
 ## Model Identifiers
 
-google/gemini-2.5-flash, inception/mercury-2, openai/gpt-4.1-mini, x-ai/grok-4.3
+Dream-org/Dream-v0-Instruct-7B, GSAI-ML/LLaDA-8B-Instruct, google/diffusiongemma-26B-A4B-it, google/gemini-2.5-flash, inception/mercury-2, openai/gpt-4.1-mini, x-ai/grok-4.3
 
 ## Prompt Conditions
 
@@ -26,4 +26,4 @@ Correctness labels come from `analysis/llm_as_judge/llm_as_judge.py`. Numeric an
 
 ## Metric Definitions
 
-Accuracy is the fraction of judged generations marked correct. Mean confidence is the arithmetic mean of verbalized confidence. Expected calibration error (ECE) uses 10 equal-width confidence bins and weights each absolute bin accuracy-confidence gap by bin frequency. Area under the risk-coverage curve (AURC) sorts generations from highest to lowest confidence, computes the cumulative error rate at each coverage level, and averages those risks; lower AURC indicates better confidence-based selective prediction. Behavioral alignment score (BAS) is the fraction of paired prompt interventions where cautious prompting gives confidence less than or equal to neutral confidence and overconfident prompting gives confidence greater than or equal to neutral confidence for the same model, question, and sample index. Brier score is the mean squared error between confidence and correctness. Area under the receiver operating characteristic curve (AUROC) is the Mann-Whitney probability that a correct generation receives higher confidence than an incorrect generation, with half credit for ties. High-confidence wrong rate is the fraction of all evaluated generations that are incorrect with confidence >= 0.90. Parse success is parsed rows divided by raw rows for each model.
+Accuracy is the fraction of judged generations marked correct. Mean confidence is the arithmetic mean of verbalized confidence. Expected calibration error (ECE) uses 10 equal-width confidence bins and weights each absolute bin accuracy-confidence gap by bin frequency. Area under the risk-coverage curve (AURC) sorts generations from highest to lowest confidence, computes the cumulative error rate at each coverage level, and averages those risks; lower AURC indicates better confidence-based selective prediction. Brier score is the mean squared error between confidence and correctness. Area under the receiver operating characteristic curve (AUROC) is the Mann-Whitney probability that a correct generation receives higher confidence than an incorrect generation, with half credit for ties. High-confidence wrong rate is the fraction of all evaluated generations that are incorrect with confidence >= 0.90. Parse success is parsed rows divided by raw rows for each model.

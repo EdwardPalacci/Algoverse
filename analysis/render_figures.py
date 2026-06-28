@@ -88,29 +88,6 @@ def aurc(rows: list[dict]) -> float | None:
     return mean(risks)
 
 
-def behavioral_alignment_score(rows: list[dict]) -> float | None:
-    by_key: dict[tuple[str, str, int], dict[str, float]] = {}
-    for row in rows:
-        if row.get("parsed_confidence") is None:
-            continue
-        key = (
-            row.get("model_id", row.get("model_name", "")),
-            row.get("question_id", ""),
-            int(row.get("sample_id", 0)),
-        )
-        by_key.setdefault(key, {})[row.get("prompt_condition", "")] = row["parsed_confidence"]
-    checks = []
-    for condition_values in by_key.values():
-        neutral = condition_values.get("neutral")
-        if neutral is None:
-            continue
-        if "cautious" in condition_values:
-            checks.append(1.0 if condition_values["cautious"] <= neutral else 0.0)
-        if "overconfident" in condition_values:
-            checks.append(1.0 if condition_values["overconfident"] >= neutral else 0.0)
-    return mean(checks)
-
-
 def reliability_points(rows: list[dict], family: str) -> list[tuple[float, float, int]]:
     points = []
     family_rows = [
@@ -316,10 +293,10 @@ def write_benchmark_flowchart_figure(path: Path) -> list[dict]:
     draw_flow_box(fig, 550, 95, 560, 64, "#e8f0fb", ["Input questions", "GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA"])
     draw_flow_box(fig, 550, 185, 560, 64, "#e9f6ec", ["Prompted benchmark items", "neutral, cautious, overconfident"])
     draw_flow_box(fig, 330, 305, 340, 72, "#fff0df", ["Autoregressive models", "Gemini, GPT-4.1 mini, Grok"])
-    draw_flow_box(fig, 770, 305, 340, 72, "#fff0df", ["Diffusion model", "Mercury-2"])
+    draw_flow_box(fig, 770, 305, 340, 72, "#fff0df", ["Diffusion models", "Mercury-2, Dream, DiffusionGemma, LLaDA"])
     draw_flow_box(fig, 550, 425, 560, 64, "#f0e9fb", ["Shared generation schema", "answer, confidence, short explanation"])
     draw_flow_box(fig, 330, 545, 340, 72, "#eeeeee", ["Correctness grading", "deterministic checks + LLM judge"])
-    draw_flow_box(fig, 770, 545, 340, 72, "#fdeceb", ["Calibration analysis", "ECE, AURC, BAS, AUROC, HCWR"])
+    draw_flow_box(fig, 770, 545, 340, 72, "#fdeceb", ["Calibration analysis", "ECE, AURC, AUROC, HCWR"])
     draw_flow_box(fig, 550, 655, 560, 62, "#fff8d9", ["Benchmark outputs", "AR-DLM comparison, accuracy, calibration, prompt sensitivity"])
     draw_arrow(fig, 550, 127, 550, 153)
     draw_arrow(fig, 500, 217, 365, 268)
@@ -337,7 +314,7 @@ def write_benchmark_flowchart_figure(path: Path) -> list[dict]:
         {"stage_order": 3, "stage": "Model generation", "output": "AR and DLM responses"},
         {"stage_order": 4, "stage": "Shared schema", "output": "Answer, confidence, and short explanation"},
         {"stage_order": 5, "stage": "Correctness grading", "output": "LLM-as-judge correctness labels"},
-        {"stage_order": 6, "stage": "Calibration analysis", "output": "ECE, AURC, BAS, AUROC, and HCWR"},
+        {"stage_order": 6, "stage": "Calibration analysis", "output": "ECE, AURC, AUROC, and HCWR"},
         {"stage_order": 7, "stage": "Benchmark outputs", "output": "Family, dataset, and prompt-condition comparisons"},
     ]
 
@@ -448,25 +425,16 @@ def prompt_sensitivity_data(rows: list[dict]) -> list[dict]:
                 "value": aurc(subset) or 0.0,
                 "N": len(subset),
             })
-        family_rows = [row for row in rows if row["model_family"] == family]
-        output.append({
-            "metric": "BAS",
-            "model_family": family,
-            "prompt_condition": "all",
-            "value": behavioral_alignment_score(family_rows) or 0.0,
-            "N": len(family_rows),
-        })
     return output
 
 
 def write_prompt_sensitivity_figure(path: Path, rows: list[dict]) -> list[dict]:
-    fig = CairoFigure(path, width=1220, height=540)
+    fig = CairoFigure(path, width=980, height=520)
     fig.text(72, 34, "Prompt intervention metrics", 20, bold=True)
     data = prompt_sensitivity_data(rows)
-    draw_metric_panel(fig, data, "ECE", "Expected calibration error", 72, 380, 80, 420, 0.30, ["cautious", "neutral", "overconfident"])
-    draw_metric_panel(fig, data, "AURC", "Area under risk-coverage", 452, 760, 80, 420, 0.30, ["cautious", "neutral", "overconfident"])
-    draw_metric_panel(fig, data, "BAS", "Behavioral alignment score", 832, 1120, 80, 420, 1.00, ["all"])
-    draw_legend(fig, ["Autoregressive (AR)", "Diffusion language model (DLM)"], 820, 482)
+    draw_metric_panel(fig, data, "ECE", "Expected calibration error", 88, 420, 82, 405, 0.65, ["cautious", "neutral", "overconfident"])
+    draw_metric_panel(fig, data, "AURC", "Area under risk-coverage", 530, 862, 82, 405, 0.75, ["cautious", "neutral", "overconfident"])
+    draw_legend(fig, ["Autoregressive (AR)", "Diffusion language model (DLM)"], 330, 468)
     fig.write()
     return data
 
@@ -641,14 +609,14 @@ def produce_figures(rows: list[dict]) -> None:
     write_csv(FIG_CSV_DIR / "figure_1_benchmark_flowchart_data.csv", flowchart_data, ["stage_order", "stage", "output"])
     write_text(
         FIG_CAPTION_DIR / "figure_1_caption.txt",
-        "Figure 1. Benchmark pipeline. Input questions are converted into prompt-conditioned benchmark items, routed through autoregressive language models (AR) and the diffusion language model (DLM), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses.\n",
+        "Figure 1. Benchmark pipeline. Input questions are converted into prompt-conditioned benchmark items, routed through autoregressive language models (AR) and diffusion language models (DLMs), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses.\n",
     )
 
     reliability_data = write_reliability_figure(FIG_PNG_DIR / "figure_4_ar_dlm_reliability_diagram.png", rows)
     write_csv(FIG_CSV_DIR / "figure_4_ar_dlm_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy", "bin_count"])
     write_text(
         FIG_CAPTION_DIR / "figure_4_caption.txt",
-        "Figure 4. AR/DLM reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and the diffusion language model (DLM) using the saved LLM-as-judge correctness labels. Bin counts are saved in the companion CSV because sparse bins can produce visually extreme points.\n",
+        "Figure 4. AR/DLM reliability diagram using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and diffusion language models (DLMs) using the saved LLM-as-judge correctness labels. Bin counts are saved in the companion CSV because sparse bins can produce visually extreme points.\n",
     )
 
     write_distribution_figure(FIG_PNG_DIR / "figure_5_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
@@ -656,7 +624,7 @@ def produce_figures(rows: list[dict]) -> None:
     write_csv(FIG_CSV_DIR / "figure_5_confidence_by_correctness_data.csv", figure_2_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
         FIG_CAPTION_DIR / "figure_5_caption.txt",
-        "Figure 5. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes the diffusion language model. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
+        "Figure 5. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes diffusion language models. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
     )
 
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
@@ -665,14 +633,14 @@ def produce_figures(rows: list[dict]) -> None:
     write_csv(FIG_CSV_DIR / "figure_6_confidence_by_correctness_neutral_data.csv", neutral_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
     write_text(
         FIG_CAPTION_DIR / "figure_6_caption.txt",
-        "Figure 6. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. This neutral-only comparison controls the prompt condition across autoregressive language models (AR) and the diffusion language model (DLM), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
+        "Figure 6. Reported confidence distributions for correct and wrong answers under the neutral prompt only. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. This neutral-only comparison controls the prompt condition across autoregressive language models (AR) and diffusion language models (DLMs), so it is the most relevant version of the distributional plot for comparing model families without pooling over cautious and overconfident prompt interventions.\n",
     )
 
     prompt_data = write_prompt_sensitivity_figure(FIG_PNG_DIR / "figure_7_prompt_sensitivity.png", rows)
     write_csv(FIG_CSV_DIR / "figure_7_prompt_sensitivity_data.csv", prompt_data, ["metric", "model_family", "prompt_condition", "value", "N"])
     write_text(
         FIG_CAPTION_DIR / "figure_7_caption.txt",
-        "Figure 7. Prompt intervention metrics comparing autoregressive language models (AR) and the diffusion language model (DLM). ECE is expected calibration error using 10 equal-width confidence bins. AURC is area under the risk-coverage curve, where lower values indicate better confidence-based selective prediction. BAS is behavioral alignment score: the fraction of paired prompt interventions where cautious prompting lowers confidence relative to neutral and overconfident prompting raises confidence relative to neutral.\n",
+        "Figure 7. Prompt intervention metrics comparing autoregressive language models (AR) and diffusion language models (DLMs). ECE is expected calibration error using 10 equal-width confidence bins. AURC is area under the risk-coverage curve, where lower values indicate better confidence-based selective prediction.\n",
     )
 
     risk_data = write_risk_coverage_figure(FIG_PNG_DIR / "figure_8_risk_coverage_curve.png", rows)

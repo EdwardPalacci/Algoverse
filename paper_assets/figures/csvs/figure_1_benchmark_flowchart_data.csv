@@ -4,5 +4,5 @@ stage_order,stage,output
 3,Model generation,AR and DLM responses
 4,Shared schema,"Answer, confidence, and short explanation"
 5,Correctness grading,LLM-as-judge correctness labels
-6,Calibration analysis,"ECE, AURC, BAS, AUROC, and HCWR"
+6,Calibration analysis,"ECE, AURC, AUROC, and HCWR"
 7,Benchmark outputs,"Family, dataset, and prompt-condition comparisons"

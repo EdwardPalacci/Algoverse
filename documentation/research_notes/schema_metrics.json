@@ -8,7 +8,6 @@
     "mean_confidence",
     "expected_calibration_error",
     "area_under_risk_coverage",
-    "behavioral_alignment_score",
     "brier_score",
     "area_under_roc",
     "high_confidence_wrong_rate"

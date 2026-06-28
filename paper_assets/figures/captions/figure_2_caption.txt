@@ -1,1 +1,1 @@
-Figure 2. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the three autoregressive models can be compared against the single diffusion language model without sample-size distortion.
+Figure 2. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the autoregressive and diffusion model families can be compared without sample-size distortion.

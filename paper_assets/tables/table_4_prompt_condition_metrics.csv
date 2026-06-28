@@ -1,4 +1,13 @@
 model,family,prompt_condition,N,accuracy,mean_confidence,expected_calibration_error,area_under_risk_coverage,brier_score,high_confidence_wrong_rate
+Dream-org/Dream-v0-Instruct-7B,DLM,cautious,750,0.326667,0.651042,0.464931,0.635163,0.468691,0.317333
+Dream-org/Dream-v0-Instruct-7B,DLM,neutral,750,0.312000,0.828655,0.580588,0.616287,0.578803,0.500000
+Dream-org/Dream-v0-Instruct-7B,DLM,overconfident,750,0.344000,0.965314,0.613849,0.588364,0.613474,0.588000
+GSAI-ML/LLaDA-8B-Instruct,DLM,cautious,750,0.297333,0.950400,0.661067,0.638827,0.652213,0.690667
+GSAI-ML/LLaDA-8B-Instruct,DLM,neutral,750,0.288000,0.974400,0.686400,0.652009,0.684060,0.708000
+GSAI-ML/LLaDA-8B-Instruct,DLM,overconfident,750,0.296000,0.991200,0.695200,0.614455,0.696820,0.700000
+google/diffusiongemma-26B-A4B-it,DLM,cautious,750,0.584000,0.972267,0.388267,0.277574,0.385607,0.408000
+google/diffusiongemma-26B-A4B-it,DLM,neutral,750,0.584000,0.973467,0.389467,0.288902,0.388853,0.414667
+google/diffusiongemma-26B-A4B-it,DLM,overconfident,750,0.586667,0.999867,0.413200,0.319466,0.413080,0.413333
 google/gemini-2.5-flash,AR,cautious,750,0.726667,0.958067,0.236733,0.225360,0.250350,0.266667
 google/gemini-2.5-flash,AR,neutral,750,0.721333,0.963867,0.242533,0.272229,0.257733,0.278667
 google/gemini-2.5-flash,AR,overconfident,750,0.730667,0.999867,0.269200,0.285098,0.269207,0.269333

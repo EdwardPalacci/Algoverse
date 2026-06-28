@@ -516,7 +516,7 @@ def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> No
     )
     write_text(
         FIG_CAPTION_DIR / "figure_2_caption.txt",
-        "Figure 2. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the three autoregressive models can be compared against the single diffusion language model without sample-size distortion.\n",
+        "Figure 2. Confidence distributions by prompt condition and model family. Bars show within-family shares rather than raw counts so the autoregressive and diffusion model families can be compared without sample-size distortion.\n",
     )
 
     write_reliability_by_condition_figure(
@@ -531,7 +531,7 @@ def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> No
     )
     write_text(
         FIG_CAPTION_DIR / "figure_3_caption.txt",
-        "Figure 3. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and the diffusion language model (DLM); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
+        "Figure 3. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and diffusion language models (DLMs); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
     )
 
 
