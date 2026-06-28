@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import json
+import random
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -20,6 +21,17 @@ QC_DIR = TABLE_DIR / "quality_control"
 DOCS_DIR = ROOT / "documentation" / "research_notes"
 HIGH_CONFIDENCE_THRESHOLD = 0.90
 ECE_BINS = 10
+BOOTSTRAP_ITERATIONS = 1000
+BOOTSTRAP_SEED = 20260628
+CI_METRICS = [
+    "accuracy",
+    "mean_confidence",
+    "expected_calibration_error",
+    "area_under_risk_coverage",
+    "brier_score",
+    "area_under_roc",
+    "high_confidence_wrong_rate",
+]
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -169,24 +181,36 @@ def brier(rows: list[dict]) -> float | None:
 
 
 def auroc(rows: list[dict]) -> float | None:
-    positive = [
-        row["parsed_confidence"] for row in rows
-        if row.get("parsed_confidence") is not None and row.get("correct_auto") is True
+    usable = [
+        (row["parsed_confidence"], 1 if row.get("correct_auto") is True else 0)
+        for row in rows
+        if row.get("parsed_confidence") is not None
+        and row.get("correct_auto") is not None
     ]
-    negative = [
-        row["parsed_confidence"] for row in rows
-        if row.get("parsed_confidence") is not None and row.get("correct_auto") is False
-    ]
-    if not positive or not negative:
+    positives = sum(label for _confidence, label in usable)
+    negatives = len(usable) - positives
+    if not positives or not negatives:
         return None
-    wins = 0.0
-    for pos in positive:
-        for neg in negative:
-            if pos > neg:
-                wins += 1.0
-            elif pos == neg:
-                wins += 0.5
-    return wins / (len(positive) * len(negative))
+
+    rank_sum = 0.0
+    rank = 1
+    for confidence, tied_rows in grouped_by_confidence(usable):
+        _ = confidence
+        tie_count = len(tied_rows)
+        average_rank = rank + (tie_count - 1) / 2
+        rank_sum += average_rank * sum(label for _score, label in tied_rows)
+        rank += tie_count
+    return (rank_sum - positives * (positives + 1) / 2) / (positives * negatives)
+
+
+def grouped_by_confidence(rows: list[tuple[float, int]]) -> list[tuple[float, list[tuple[float, int]]]]:
+    output = []
+    for confidence, group in grouped(
+        [{"confidence": confidence, "label": label} for confidence, label in sorted(rows)],
+        ("confidence",),
+    ).items():
+        output.append((confidence[0], [(row["confidence"], row["label"]) for row in group]))
+    return output
 
 
 def aurc(rows: list[dict]) -> float | None:
@@ -230,6 +254,63 @@ def metric_row(rows: list[dict], raw_count: int | None = None) -> dict:
         "high_confidence_wrong_rate": high_confidence_wrong / n if n else None,
         "parse_success": parsed / raw_count if raw_count else None,
     }
+
+
+def standard_error(values: list[float]) -> float | None:
+    if len(values) < 2:
+        return None
+    center = mean(values)
+    if center is None:
+        return None
+    variance = sum((value - center) ** 2 for value in values) / (len(values) - 1)
+    return variance ** 0.5
+
+
+def bootstrap_metric_intervals(
+    rows: list[dict],
+    point_estimates: dict,
+    iterations: int = BOOTSTRAP_ITERATIONS,
+) -> dict[str, tuple[float | None, float | None]]:
+    """Cluster bootstrap over question IDs, preserving all samples/conditions per question."""
+    by_question = grouped(rows, ("question_id",))
+    question_ids = sorted(question_id[0] for question_id in by_question)
+    if not question_ids:
+        return {metric: (None, None) for metric in CI_METRICS}
+
+    rng = random.Random(BOOTSTRAP_SEED + sum(ord(char) for char in "|".join(question_ids)))
+    metric_samples: dict[str, list[float]] = {metric: [] for metric in CI_METRICS}
+
+    for _index in range(iterations):
+        sampled_rows = []
+        for question_id in (rng.choice(question_ids) for _ in question_ids):
+            sampled_rows.extend(by_question[(question_id,)])
+        metrics = metric_row(sampled_rows)
+        for metric in CI_METRICS:
+            value = metrics.get(metric)
+            if isinstance(value, (int, float)):
+                metric_samples[metric].append(float(value))
+
+    intervals = {}
+    for metric, values in metric_samples.items():
+        point = point_estimates.get(metric)
+        se = standard_error(values)
+        if not isinstance(point, (int, float)) or se is None:
+            intervals[metric] = (None, None)
+            continue
+        intervals[metric] = (
+            max(0.0, float(point) - 1.96 * se),
+            min(1.0, float(point) + 1.96 * se),
+        )
+    return intervals
+
+
+def add_ci_fields(row: dict, intervals: dict[str, tuple[float | None, float | None]]) -> dict:
+    row = dict(row)
+    for metric in CI_METRICS:
+        low, high = intervals.get(metric, (None, None))
+        row[f"{metric}_ci_low"] = fmt(low)
+        row[f"{metric}_ci_high"] = fmt(high)
+    return row
 
 
 def produce_alignment_report(rows: list[dict], rows_for_comparison: list[dict]) -> None:
@@ -309,8 +390,40 @@ def produce_tables(rows: list[dict], raw_counts: dict[tuple[str, str], int]) -> 
     table2 = []
     for (model, family), group_rows in sorted(grouped(rows, ("model_id", "model_family")).items()):
         metrics = metric_row(group_rows, raw_counts.get((family, model)))
-        table2.append({"model": model, "family": family, **{key: fmt(value) for key, value in metrics.items()}})
-    write_csv(TABLE_DIR / "table_2_aggregate_metrics.csv", table2, ["model", "family", "N", "accuracy", "mean_confidence", "expected_calibration_error", "area_under_risk_coverage", "brier_score", "area_under_roc", "high_confidence_wrong_rate", "parse_success"])
+        intervals = bootstrap_metric_intervals(group_rows, metrics)
+        table2.append(add_ci_fields({
+            "model": model,
+            "family": family,
+            **{key: fmt(value) for key, value in metrics.items()},
+        }, intervals))
+    table2_fields = [
+        "model",
+        "family",
+        "N",
+        "accuracy",
+        "accuracy_ci_low",
+        "accuracy_ci_high",
+        "mean_confidence",
+        "mean_confidence_ci_low",
+        "mean_confidence_ci_high",
+        "expected_calibration_error",
+        "expected_calibration_error_ci_low",
+        "expected_calibration_error_ci_high",
+        "area_under_risk_coverage",
+        "area_under_risk_coverage_ci_low",
+        "area_under_risk_coverage_ci_high",
+        "brier_score",
+        "brier_score_ci_low",
+        "brier_score_ci_high",
+        "area_under_roc",
+        "area_under_roc_ci_low",
+        "area_under_roc_ci_high",
+        "high_confidence_wrong_rate",
+        "high_confidence_wrong_rate_ci_low",
+        "high_confidence_wrong_rate_ci_high",
+        "parse_success",
+    ]
+    write_csv(TABLE_DIR / "table_2_aggregate_metrics.csv", table2, table2_fields)
 
     table3 = []
     for (dataset, model, family), group_rows in sorted(grouped(rows, ("dataset", "model_id", "model_family")).items()):
@@ -386,7 +499,7 @@ def produce_audit_and_cases(rows: list[dict]) -> None:
 def produce_table_captions() -> None:
     captions = {
         "table_1_caption.txt": "Table 1. Benchmark specification by dataset, model, model family, and prompt condition. N is the number of judged generations in the aligned comparative analysis set.\n",
-        "table_2_caption.txt": "Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; AUROC measures whether confidence ranks correct generations above incorrect generations.\n",
+        "table_2_caption.txt": "Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; AUROC measures whether confidence ranks correct generations above incorrect generations. Confidence intervals are 95% bootstrap standard-error intervals over question IDs, preserving all prompt conditions and repeated samples for each resampled question.\n",
         "table_3_caption.txt": "Table 3. Dataset-level calibration metrics by model. Metrics are computed on judged generations from the shared question-ID analysis set and include accuracy, confidence, ECE, AURC, AUROC, and high-confidence wrong rate.\n",
         "table_4_caption.txt": "Table 4. Prompt-condition calibration metrics. Expected calibration error, AURC, and high-confidence wrong rate quantify sensitivity to cautious, neutral, and overconfident prompting.\n",
         "table_5_caption.txt": "Table 5. Representative cases selected for qualitative audit. Correctness reflects the saved LLM-as-judge result and should be manually adjudicated before being used as final qualitative evidence.\n",
@@ -429,6 +542,10 @@ Correctness labels come from `analysis/llm_as_judge/llm_as_judge.py`. Numeric an
 ## Metric Definitions
 
 Accuracy is the fraction of judged generations marked correct. Mean confidence is the arithmetic mean of verbalized confidence. Expected calibration error (ECE) uses {ECE_BINS} equal-width confidence bins and weights each absolute bin accuracy-confidence gap by bin frequency. Area under the risk-coverage curve (AURC) sorts generations from highest to lowest confidence, computes the cumulative error rate at each coverage level, and averages those risks; lower AURC indicates better confidence-based selective prediction. Brier score is the mean squared error between confidence and correctness. Area under the receiver operating characteristic curve (AUROC) is the Mann-Whitney probability that a correct generation receives higher confidence than an incorrect generation, with half credit for ties. High-confidence wrong rate is the fraction of all evaluated generations that are incorrect with confidence >= {HIGH_CONFIDENCE_THRESHOLD:.2f}. Parse success is parsed rows divided by raw rows for each model.
+
+## Confidence Intervals
+
+Aggregate table confidence intervals are 95% bootstrap standard-error intervals over `question_id` clusters with {BOOTSTRAP_ITERATIONS} bootstrap resamples. Each resampled question contributes all of its model generations across prompt conditions and sample indices, so repeated generations for the same question are not treated as independent bootstrap units.
 """
     write_text(DOCS_DIR / "benchmark_spec.md", spec)
 

@@ -27,3 +27,7 @@ Correctness labels come from `analysis/llm_as_judge/llm_as_judge.py`. Numeric an
 ## Metric Definitions
 
 Accuracy is the fraction of judged generations marked correct. Mean confidence is the arithmetic mean of verbalized confidence. Expected calibration error (ECE) uses 10 equal-width confidence bins and weights each absolute bin accuracy-confidence gap by bin frequency. Area under the risk-coverage curve (AURC) sorts generations from highest to lowest confidence, computes the cumulative error rate at each coverage level, and averages those risks; lower AURC indicates better confidence-based selective prediction. Brier score is the mean squared error between confidence and correctness. Area under the receiver operating characteristic curve (AUROC) is the Mann-Whitney probability that a correct generation receives higher confidence than an incorrect generation, with half credit for ties. High-confidence wrong rate is the fraction of all evaluated generations that are incorrect with confidence >= 0.90. Parse success is parsed rows divided by raw rows for each model.
+
+## Confidence Intervals
+
+Aggregate table confidence intervals are 95% bootstrap standard-error intervals over `question_id` clusters with 1000 bootstrap resamples. Each resampled question contributes all of its model generations across prompt conditions and sample indices, so repeated generations for the same question are not treated as independent bootstrap units.

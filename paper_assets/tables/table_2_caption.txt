@@ -1,1 +1,1 @@
-Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; AUROC measures whether confidence ranks correct generations above incorrect generations.
+Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; AUROC measures whether confidence ranks correct generations above incorrect generations. Confidence intervals are 95% bootstrap standard-error intervals over question IDs, preserving all prompt conditions and repeated samples for each resampled question.
