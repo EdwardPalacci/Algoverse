@@ -174,6 +174,37 @@ Even when unsure, provide the best possible answer confidently.
 }
 
 
+GENERATION_SPECIAL_TOKEN_PATTERNS = [
+    r"<pad>",
+    r"<turn\|>",
+    r"<\|return\|>",
+    r"<\|end\|>",
+    r"<\|start\|>",
+    r"<channel\|>",
+    r"<\|channel>final",
+    r"<\|channel>thought",
+    r"<bos>",
+    r"<eos>",
+    r"</s>",
+]
+
+
+def clean_generation_text(value):
+
+    if not isinstance(value, str):
+        return value
+
+    text = value
+
+    for pattern in GENERATION_SPECIAL_TOKEN_PATTERNS:
+        text = re.sub(pattern, "", text)
+
+    text = re.sub(r"\s*'\]\s*$", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
+
+
 def build_user_prompt(item):
 
     dataset = item.get("dataset", "")
@@ -820,7 +851,7 @@ def parse_response(raw_text):
     if raw_text is None or not isinstance(raw_text, str):
         return None
 
-    raw_text = strip_code_fences(raw_text)
+    raw_text = clean_generation_text(strip_code_fences(raw_text))
 
     try:
         return normalize_parsed_response(
@@ -899,11 +930,11 @@ def build_parsed_record(raw_record, item, parsed):
         "prompt": raw_record["prompt"],
         "ground_truth": item["ground_truth"],
         "answer_type": item["answer_type"],
-        "raw_response": raw_record["raw_response"],
-        "answer": parsed.get("answer"),
+        "raw_response": clean_generation_text(raw_record["raw_response"]),
+        "answer": clean_generation_text(parsed.get("answer")),
         "confidence": parsed.get("confidence"),
-        "short_explanation": parsed.get(
-            "short_explanation"
+        "short_explanation": clean_generation_text(
+            parsed.get("short_explanation")
         ),
         "parse_success": True
     }
@@ -930,12 +961,12 @@ def fallback_answer_from_raw(raw_response):
         value = match.group(1).strip()
         if value.startswith('"'):
             try:
-                return str(json.loads(value))
+                return clean_generation_text(str(json.loads(value)))
             except Exception:
-                return value.strip('"')
-        return value
+                return clean_generation_text(value.strip('"'))
+        return clean_generation_text(value)
 
-    return raw_response.strip()
+    return clean_generation_text(raw_response.strip())
 
 
 def build_unparsed_record(raw_record, item, error_message):
@@ -951,7 +982,7 @@ def build_unparsed_record(raw_record, item, error_message):
         "prompt": raw_record["prompt"],
         "ground_truth": item["ground_truth"],
         "answer_type": item["answer_type"],
-        "raw_response": raw_record["raw_response"],
+        "raw_response": clean_generation_text(raw_record["raw_response"]),
         "answer": fallback_answer_from_raw(raw_record["raw_response"]),
         "confidence": None,
         "short_explanation": None,
@@ -1113,7 +1144,7 @@ def run_generation_job(
                 "provider": provider,
                 "prompt": item["question"],
                 "generation_prompt": user_prompt,
-                "raw_response": raw_response
+                "raw_response": clean_generation_text(raw_response)
             }
 
             parsed = parse_response(raw_response)
