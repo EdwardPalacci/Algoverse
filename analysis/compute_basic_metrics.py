@@ -531,7 +531,7 @@ def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> No
     )
     write_text(
         FIG_CAPTION_DIR / "figure_3_caption.txt",
-        "Figure 3. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and diffusion language models (DLMs); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
+        "Figure 3. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and diffusion language models (DLMs); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Points are not connected because adjacent confidence bins can have very different sample sizes. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
     )
 
 
@@ -571,8 +571,8 @@ def draw_histogram_panel(fig: CairoFigure, left: int, right: int, top: int, bott
         value = tick / 5
         x = left + value * (right - left)
         fig.text(x, bottom + 20, f"{value:.1f}", 10, "#444444", align="center")
-    fig.text((left + right) / 2, bottom + 48, "Reported confidence", 12, align="center")
-    fig.text(left - 44, (top + bottom) / 2, "Share", 12, align="center", rotate=-1.5708)
+    fig.text((left + right) / 2, bottom + 48, "Reported confidence bin", 12, align="center")
+    fig.text(left - 48, (top + bottom) / 2, "Share of generations", 12, align="center", rotate=-1.5708)
 
 
 def write_reliability_by_condition_figure(path: Path, gens: list[Generation]) -> None:
@@ -618,14 +618,12 @@ def draw_reliability_panel(fig: CairoFigure, left: int, right: int, top: int, bo
             )
             for row in family_rows
         ]
-        for (px, py, pn), (qx, qy, qn) in zip(coords, coords[1:]):
-            if pn >= 20 and qn >= 20:
-                fig.line(px, py, qx, qy, FAMILY_COLORS[family], 2.0)
         for x, y, bin_count in coords:
             fig.circle(x, y, 4.2, FAMILY_COLORS[family])
             if 0 < bin_count < 20:
                 fig.text(x + 6, y - 5, f"n={bin_count}", 8, "#333333")
     fig.text((left + right) / 2, bottom + 48, "Mean confidence", 12, align="center")
+    fig.text(left - 48, (top + bottom) / 2, "Empirical accuracy", 12, align="center", rotate=-1.5708)
 
 
 def condition_order(groups) -> list[str]:

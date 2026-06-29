@@ -66,9 +66,14 @@ paper_assets/tables/table_2_caption.txt,artifact,Generated benchmark artifact,Re
 paper_assets/tables/table_3_caption.txt,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/table_4_caption.txt,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/table_5_caption.txt,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/tables/quality_control/anomaly_dataset_summary.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/tables/quality_control/anomaly_family_dataset_summary.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/tables/quality_control/anomaly_model_summary.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/tables/quality_control/answer_explanation_disagreement_candidates.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/quality_control/data_alignment_exclusions.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/quality_control/data_alignment_report.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/tables/quality_control/manual_grading_audit.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/pngs/figure_10_reliability_diagram_with_ci.png,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/pngs/figure_1_benchmark_flowchart.png,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/pngs/figure_2_confidence_histogram.png,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/pngs/figure_3_reliability_diagram.png,artifact,Generated benchmark artifact,Results,true,true
@@ -78,6 +83,7 @@ paper_assets/figures/pngs/figure_6_confidence_by_correctness_neutral.png,artifac
 paper_assets/figures/pngs/figure_7_prompt_sensitivity.png,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/pngs/figure_8_risk_coverage_curve.png,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/pngs/figure_9_dataset_metric_heatmap.png,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/csvs/figure_10_reliability_diagram_with_ci_data.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/csvs/figure_1_benchmark_flowchart_data.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/csvs/figure_2_confidence_histogram_data.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/csvs/figure_3_reliability_diagram_data.csv,artifact,Generated benchmark artifact,Results,true,true
@@ -87,6 +93,7 @@ paper_assets/figures/csvs/figure_6_confidence_by_correctness_neutral_data.csv,ar
 paper_assets/figures/csvs/figure_7_prompt_sensitivity_data.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/csvs/figure_8_risk_coverage_curve_data.csv,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/csvs/figure_9_dataset_metric_heatmap_data.csv,artifact,Generated benchmark artifact,Results,true,true
+paper_assets/figures/captions/figure_10_caption.txt,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/captions/figure_1_caption.txt,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/captions/figure_2_caption.txt,artifact,Generated benchmark artifact,Results,true,true
 paper_assets/figures/captions/figure_3_caption.txt,artifact,Generated benchmark artifact,Results,true,true

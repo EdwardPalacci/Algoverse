@@ -17,6 +17,7 @@ from compute_basic_metrics import reliability_bins_by_condition
 from generate_paper_assets import aligned_rows, load_all_rows
 from render_figures import FIG_CSV_DIR, FIG_PNG_DIR, confidence_distribution_data, dataset_metric_data
 from render_figures import prompt_sensitivity_data, risk_coverage_curve_data
+from render_figures import reliability_interval_points
 from render_figures import reliability_points
 
 
@@ -79,6 +80,25 @@ def check_reliability_csv(path: Path, rows: list[dict]) -> None:
             raise AssertionError(f"{path}: empirical_accuracy mismatch")
         if int(actual_row["bin_count"]) != expected_row["bin_count"]:
             raise AssertionError(f"{path}: bin_count mismatch")
+
+
+def check_reliability_ci_csv(path: Path, rows: list[dict]) -> None:
+    expected = []
+    for family in ["AR", "DLM"]:
+        expected.extend(reliability_interval_points(rows, family))
+    actual = read_csv(path)
+    if len(actual) != len(expected):
+        raise AssertionError(f"{path}: row count mismatch")
+    for actual_row, expected_row in zip(actual, expected):
+        for key in ["model_family"]:
+            if actual_row[key] != expected_row[key]:
+                raise AssertionError(f"{path}: mismatch in {key}")
+        for key in ["bin_count", "correct_count"]:
+            if int(actual_row[key]) != int(expected_row[key]):
+                raise AssertionError(f"{path}: mismatch in {key}")
+        for key in ["bin_low", "bin_high", "mean_confidence", "empirical_accuracy", "accuracy_ci_low", "accuracy_ci_high"]:
+            if not close(as_float(actual_row[key]), float(expected_row[key])):
+                raise AssertionError(f"{path}: mismatch in {key}")
 
 
 def check_prompt_sensitivity_csv(path: Path, rows: list[dict]) -> None:
@@ -180,10 +200,12 @@ def main() -> None:
     check_png(FIG_PNG_DIR / "figure_7_prompt_sensitivity.png")
     check_png(FIG_PNG_DIR / "figure_8_risk_coverage_curve.png")
     check_png(FIG_PNG_DIR / "figure_9_dataset_metric_heatmap.png")
+    check_png(FIG_PNG_DIR / "figure_10_reliability_diagram_with_ci.png")
 
     check_basic_histogram_csv(FIG_CSV_DIR / "figure_2_confidence_histogram_data.csv")
     check_basic_reliability_csv(FIG_CSV_DIR / "figure_3_reliability_diagram_data.csv")
     check_reliability_csv(FIG_CSV_DIR / "figure_4_ar_dlm_reliability_diagram_data.csv", rows)
+    check_reliability_ci_csv(FIG_CSV_DIR / "figure_10_reliability_diagram_with_ci_data.csv", rows)
     check_distribution_csv(FIG_CSV_DIR / "figure_5_confidence_by_correctness_data.csv", confidence_distribution_data(rows))
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
     check_distribution_csv(FIG_CSV_DIR / "figure_6_confidence_by_correctness_neutral_data.csv", confidence_distribution_data(neutral_rows))
