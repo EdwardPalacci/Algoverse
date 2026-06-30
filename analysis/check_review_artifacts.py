@@ -191,7 +191,7 @@ def main() -> None:
     all_rows, _raw_counts = load_all_rows()
     rows = aligned_rows(all_rows)
 
-    check_png(FIG_PNG_DIR / "figure_1_benchmark_flowchart.png")
+    check_png(FIG_PNG_DIR / "figure_1_evaluation_flowchart.png")
     check_png(FIG_PNG_DIR / "figure_2_confidence_histogram.png")
     check_png(FIG_PNG_DIR / "figure_3_reliability_diagram.png")
     check_png(FIG_PNG_DIR / "figure_4_ar_dlm_reliability_diagram.png")
@@ -213,7 +213,7 @@ def main() -> None:
     check_risk_coverage_csv(FIG_CSV_DIR / "figure_8_risk_coverage_curve_data.csv", rows)
     check_dataset_metric_csv(FIG_CSV_DIR / "figure_9_dataset_metric_heatmap_data.csv", rows)
 
-    for schema_path in ["schema_benchmark_items.json", "schema_generations.json", "schema_metrics.json"]:
+    for schema_path in ["schema_evaluation_items.json", "schema_generations.json", "schema_metrics.json"]:
         json.loads((DOCS_DIR / schema_path).read_text())
     check_manifest_files_exist()
     print("artifact checks passed")

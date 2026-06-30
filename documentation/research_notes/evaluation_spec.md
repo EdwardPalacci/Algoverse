@@ -1,8 +1,8 @@
-# Benchmark Specification
+# Evaluation Specification
 
-## Benchmark Objective
+## Evaluation Objective
 
-Evaluate whether verbalized confidence tracks answer correctness under controlled prompting, comparing autoregressive language models with a diffusion language model.
+Evaluate whether verbalized confidence tracks answer correctness under controlled prompting, comparing autoregressive language models with diffusion language models.
 
 ## Unit of Evaluation
 

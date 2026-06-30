@@ -1,8 +1,8 @@
 stage_order,stage,output
-1,Input questions,250-question pilot benchmark
-2,Prompted benchmark items,"Neutral, cautious, and overconfident versions"
+1,Input questions,250-question evaluation set
+2,Prompted evaluation items,"Neutral, cautious, and overconfident versions"
 3,Model generation,AR and DLM responses
 4,Shared schema,"Answer, confidence, and short explanation"
 5,Correctness grading,LLM-as-judge correctness labels
 6,Calibration analysis,"ECE, AURC, AUROC, and HCWR"
-7,Benchmark outputs,"Family, dataset, and prompt-condition comparisons"
+7,Evaluation outputs,"Family, dataset, and prompt-condition comparisons"

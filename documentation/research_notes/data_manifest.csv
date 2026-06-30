@@ -1,5 +1,5 @@
 file_path,description,row_count
-data/PilotDataset.json,Benchmark item source file,250
+data/PilotDataset.json,Evaluation item source file,250
 ar_models/model_outputs/raw_by_model/google__gemini-2.5-flash.jsonl,Generated model or judge output,2250
 ar_models/model_outputs/raw_by_model/openai__gpt-4.1-mini.jsonl,Generated model or judge output,2250
 ar_models/model_outputs/raw_by_model/x-ai__grok-4.3.jsonl,Generated model or judge output,2250

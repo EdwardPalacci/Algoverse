@@ -338,17 +338,17 @@ def draw_flow_box(fig: CairoFigure, center_x: float, center_y: float, width: flo
     draw_centered_lines(fig, center_x, center_y + 8, lines)
 
 
-def write_benchmark_flowchart_figure(path: Path) -> list[dict]:
+def write_evaluation_flowchart_figure(path: Path) -> list[dict]:
     fig = CairoFigure(path, width=1100, height=720)
-    fig.text(70, 36, "Benchmark pipeline", 22, bold=True)
+    fig.text(70, 36, "Evaluation pipeline", 22, bold=True)
     draw_flow_box(fig, 550, 95, 560, 64, "#e8f0fb", ["Input questions", "GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA"])
-    draw_flow_box(fig, 550, 185, 560, 64, "#e9f6ec", ["Prompted benchmark items", "neutral, cautious, overconfident"])
+    draw_flow_box(fig, 550, 185, 560, 64, "#e9f6ec", ["Prompted evaluation items", "neutral, cautious, overconfident"])
     draw_flow_box(fig, 330, 305, 340, 72, "#fff0df", ["Autoregressive models", "Gemini, GPT-4.1 mini, Grok"])
     draw_flow_box(fig, 770, 305, 340, 72, "#fff0df", ["Diffusion models", "Mercury-2, Dream, DiffusionGemma, LLaDA"])
     draw_flow_box(fig, 550, 425, 560, 64, "#f0e9fb", ["Shared generation schema", "answer, confidence, short explanation"])
     draw_flow_box(fig, 330, 545, 340, 72, "#eeeeee", ["Correctness grading", "deterministic checks + LLM judge"])
     draw_flow_box(fig, 770, 545, 340, 72, "#fdeceb", ["Calibration analysis", "ECE, AURC, AUROC, HCWR"])
-    draw_flow_box(fig, 550, 655, 560, 62, "#fff8d9", ["Benchmark outputs", "AR-DLM comparison, accuracy, calibration, prompt sensitivity"])
+    draw_flow_box(fig, 550, 655, 560, 62, "#fff8d9", ["Evaluation outputs", "AR-DLM comparison, accuracy, calibration, prompt sensitivity"])
     draw_arrow(fig, 550, 127, 550, 153)
     draw_arrow(fig, 500, 217, 365, 268)
     draw_arrow(fig, 600, 217, 735, 268)
@@ -360,13 +360,13 @@ def write_benchmark_flowchart_figure(path: Path) -> list[dict]:
     draw_arrow(fig, 770, 581, 600, 626)
     fig.write()
     return [
-        {"stage_order": 1, "stage": "Input questions", "output": "250-question pilot benchmark"},
-        {"stage_order": 2, "stage": "Prompted benchmark items", "output": "Neutral, cautious, and overconfident versions"},
+        {"stage_order": 1, "stage": "Input questions", "output": "250-question evaluation set"},
+        {"stage_order": 2, "stage": "Prompted evaluation items", "output": "Neutral, cautious, and overconfident versions"},
         {"stage_order": 3, "stage": "Model generation", "output": "AR and DLM responses"},
         {"stage_order": 4, "stage": "Shared schema", "output": "Answer, confidence, and short explanation"},
         {"stage_order": 5, "stage": "Correctness grading", "output": "LLM-as-judge correctness labels"},
         {"stage_order": 6, "stage": "Calibration analysis", "output": "ECE, AURC, AUROC, and HCWR"},
-        {"stage_order": 7, "stage": "Benchmark outputs", "output": "Family, dataset, and prompt-condition comparisons"},
+        {"stage_order": 7, "stage": "Evaluation outputs", "output": "Family, dataset, and prompt-condition comparisons"},
     ]
 
 
@@ -692,11 +692,11 @@ def draw_metric_panel(fig: CairoFigure, data: list[dict], metric: str, title: st
 
 
 def produce_figures(rows: list[dict]) -> None:
-    flowchart_data = write_benchmark_flowchart_figure(FIG_PNG_DIR / "figure_1_benchmark_flowchart.png")
-    write_csv(FIG_CSV_DIR / "figure_1_benchmark_flowchart_data.csv", flowchart_data, ["stage_order", "stage", "output"])
+    flowchart_data = write_evaluation_flowchart_figure(FIG_PNG_DIR / "figure_1_evaluation_flowchart.png")
+    write_csv(FIG_CSV_DIR / "figure_1_evaluation_flowchart_data.csv", flowchart_data, ["stage_order", "stage", "output"])
     write_text(
         FIG_CAPTION_DIR / "figure_1_caption.txt",
-        "Figure 1. Benchmark pipeline. Input questions are converted into prompt-conditioned benchmark items, routed through autoregressive language models (AR) and diffusion language models (DLMs), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses.\n",
+        "Figure 1. Evaluation pipeline. Input questions are converted into prompt-conditioned evaluation items, routed through autoregressive language models (AR) and diffusion language models (DLMs), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses.\n",
     )
 
     reliability_data = write_reliability_figure(FIG_PNG_DIR / "figure_4_ar_dlm_reliability_diagram.png", rows)

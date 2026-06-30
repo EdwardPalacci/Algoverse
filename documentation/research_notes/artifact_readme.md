@@ -1,6 +1,6 @@
 # Review Artifact
 
-This artifact contains saved AR and DLM generations, split LLM-as-judge results, benchmark specifications, metric tables, figures, captions, schema documentation, and audit templates for the verbalized confidence calibration benchmark.
+This artifact contains saved AR and DLM generations, split LLM-as-judge results, evaluation specifications, metric tables, figures, captions, schema documentation, and audit templates for the verbalized confidence calibration evaluation.
 
 ## Reproduction
 

@@ -385,7 +385,7 @@ def produce_tables(rows: list[dict], raw_counts: dict[tuple[str, str], int]) -> 
             "correctness_grader": "LLM-as-judge with deterministic numeric and multiple-choice checks",
             "metrics": "accuracy; mean confidence; expected calibration error; AURC; Brier score; AUROC; high-confidence wrong rate; parse success",
         })
-    write_csv(TABLE_DIR / "table_1_benchmark_specification.csv", table1, ["dataset", "N", "model", "family", "prompt_condition", "confidence_scale", "correctness_grader", "metrics"])
+    write_csv(TABLE_DIR / "table_1_evaluation_specification.csv", table1, ["dataset", "N", "model", "family", "prompt_condition", "confidence_scale", "correctness_grader", "metrics"])
 
     table2 = []
     for (model, family), group_rows in sorted(grouped(rows, ("model_id", "model_family")).items()):
@@ -498,7 +498,7 @@ def produce_audit_and_cases(rows: list[dict]) -> None:
 
 def produce_table_captions() -> None:
     captions = {
-        "table_1_caption.txt": "Table 1. Benchmark specification by dataset, model, model family, and prompt condition. N is the number of judged generations in the aligned comparative analysis set.\n",
+        "table_1_caption.txt": "Table 1. Evaluation specification by dataset, model, model family, and prompt condition. N is the number of judged generations in the aligned comparative analysis set.\n",
         "table_2_caption.txt": "Table 2. Aggregate calibration metrics by model. AURC is area under the risk-coverage curve, where lower is better; AUROC measures whether confidence ranks correct generations above incorrect generations. Confidence intervals are 95% bootstrap standard-error intervals over question IDs, preserving all prompt conditions and repeated samples for each resampled question.\n",
         "table_3_caption.txt": "Table 3. Dataset-level calibration metrics by model. Metrics are computed on judged generations from the shared question-ID analysis set and include accuracy, confidence, ECE, AURC, AUROC, and high-confidence wrong rate.\n",
         "table_4_caption.txt": "Table 4. Prompt-condition calibration metrics. Expected calibration error, AURC, and high-confidence wrong rate quantify sensitivity to cautious, neutral, and overconfident prompting.\n",
@@ -513,11 +513,11 @@ def produce_docs(rows: list[dict], raw_counts: dict[tuple[str, str], int]) -> No
     models = sorted({row["model_id"] for row in rows})
     conditions = sorted({row["prompt_condition"] for row in rows})
     shared_count = len(shared_question_ids(rows))
-    spec = f"""# Benchmark Specification
+    spec = f"""# Evaluation Specification
 
-## Benchmark Objective
+## Evaluation Objective
 
-Evaluate whether verbalized confidence tracks answer correctness under controlled prompting, comparing autoregressive language models with a diffusion language model.
+Evaluate whether verbalized confidence tracks answer correctness under controlled prompting, comparing autoregressive language models with diffusion language models.
 
 ## Unit of Evaluation
 
@@ -547,11 +547,11 @@ Accuracy is the fraction of judged generations marked correct. Mean confidence i
 
 Aggregate table confidence intervals are 95% bootstrap standard-error intervals over `question_id` clusters with {BOOTSTRAP_ITERATIONS} bootstrap resamples. Each resampled question contributes all of its model generations across prompt conditions and sample indices, so repeated generations for the same question are not treated as independent bootstrap units.
 """
-    write_text(DOCS_DIR / "benchmark_spec.md", spec)
+    write_text(DOCS_DIR / "evaluation_spec.md", spec)
 
     readme = """# Review Artifact
 
-This artifact contains saved AR and DLM generations, split LLM-as-judge results, benchmark specifications, metric tables, figures, captions, schema documentation, and audit templates for the verbalized confidence calibration benchmark.
+This artifact contains saved AR and DLM generations, split LLM-as-judge results, evaluation specifications, metric tables, figures, captions, schema documentation, and audit templates for the verbalized confidence calibration evaluation.
 
 ## Reproduction
 
@@ -566,7 +566,7 @@ Generation outputs are split by model under `ar_models/model_outputs/` and `dlm_
 """
     write_text(DOCS_DIR / "artifact_readme.md", readme)
 
-    data_manifest = [{"file_path": "data/PilotDataset.json", "description": "Benchmark item source file", "row_count": len(json.loads(PILOT_DATA.read_text(encoding="utf-8")))}]
+    data_manifest = [{"file_path": "data/PilotDataset.json", "description": "Evaluation item source file", "row_count": len(json.loads(PILOT_DATA.read_text(encoding="utf-8")))}]
     for source in ["ar", "dlm"]:
         for path in source_raw_files(source) + source_parsed_files(source) + judge_result_files(source):
             data_manifest.append({
@@ -579,7 +579,7 @@ Generation outputs are split by model under `ar_models/model_outputs/` and `dlm_
 
 def produce_schema_files() -> None:
     schemas = {
-        "schema_benchmark_items.json": {
+        "schema_evaluation_items.json": {
             "type": "object",
             "required": ["question_id", "dataset", "question", "ground_truth", "answer_type"],
         },
@@ -635,7 +635,7 @@ def produce_manifest() -> None:
         definitions.append({
             "file_path": str(path.relative_to(ROOT)),
             "artifact_type": "artifact",
-            "description": "Generated benchmark artifact",
+            "description": "Generated evaluation artifact",
             "paper_section": "Results",
             "anonymous": "true",
             "required_for_reproduction": "true",
