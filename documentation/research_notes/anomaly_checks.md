@@ -1,6 +1,6 @@
-# Pre-Scaling Anomaly Checks
+# Anomaly Checks
 
-These checks use saved LLM-as-judge rows and parsed confidence values. Repeated generations are not treated as independent evidence for scaling decisions; these summaries are diagnostic screens before expanding the dataset.
+These checks use saved LLM-as-judge rows and parsed confidence values from the fixed 250-question evaluation. Repeated generations are summarized as diagnostic evidence, not as independent question-level evidence.
 
 ## Dream Parse Failures
 
@@ -30,6 +30,6 @@ SimpleQA remains the largest dataset-level failure mode. TruthfulQA also separat
 | DLM | SimpleQA | 1800 | 0.073889 | 0.875846 | 0.025000 | 0.686667 |
 | DLM | TruthfulQA | 1800 | 0.531111 | 0.896684 | 0.016667 | 0.368333 |
 
-## Scaling Recommendation
+## Follow-up Notes
 
-Before scaling, treat Dream parse failures and zero-confidence behavior as model-specific anomalies to monitor, not reasons to discard the current pilot. DiffusionGemma and LLaDA should be scaled only with high-confidence saturation tracked explicitly, because confidence values near 1.0 are common even on wrong answers. SimpleQA and TruthfulQA should remain balanced in any scale-up because they expose the clearest dataset-specific failures.
+Dream parse failures and zero-confidence behavior are model-specific anomalies in the fixed 250-question evaluation, not reasons to discard the current data. DiffusionGemma and LLaDA require explicit high-confidence saturation reporting because confidence values near 1.0 are common even on wrong answers. SimpleQA and TruthfulQA expose the clearest dataset-specific failures and should remain prominent in follow-up evaluation.

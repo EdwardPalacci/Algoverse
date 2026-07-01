@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run pre-scaling anomaly checks on judged generation outputs."""
+"""Run anomaly checks on judged generation outputs."""
 
 from __future__ import annotations
 
@@ -212,9 +212,9 @@ def produce_markdown(rows: list[dict], summaries: list[dict], candidates: list[d
     focused = [row for row in family_dataset if row["dataset"] in {"SimpleQA", "TruthfulQA"}]
 
     lines = [
-        "# Pre-Scaling Anomaly Checks",
+        "# Anomaly Checks",
         "",
-        "These checks use saved LLM-as-judge rows and parsed confidence values. Repeated generations are not treated as independent evidence for scaling decisions; these summaries are diagnostic screens before expanding the dataset.",
+        "These checks use saved LLM-as-judge rows and parsed confidence values from the fixed 250-question evaluation. Repeated generations are summarized as diagnostic evidence, not as independent question-level evidence.",
         "",
         "## Dream Parse Failures",
         "",
@@ -246,9 +246,9 @@ def produce_markdown(rows: list[dict], summaries: list[dict], candidates: list[d
         )
     lines.extend([
         "",
-        "## Scaling Recommendation",
+        "## Follow-up Notes",
         "",
-        "Before scaling, treat Dream parse failures and zero-confidence behavior as model-specific anomalies to monitor, not reasons to discard the current pilot. DiffusionGemma and LLaDA should be scaled only with high-confidence saturation tracked explicitly, because confidence values near 1.0 are common even on wrong answers. SimpleQA and TruthfulQA should remain balanced in any scale-up because they expose the clearest dataset-specific failures.",
+        "Dream parse failures and zero-confidence behavior are model-specific anomalies in the fixed 250-question evaluation, not reasons to discard the current data. DiffusionGemma and LLaDA require explicit high-confidence saturation reporting because confidence values near 1.0 are common even on wrong answers. SimpleQA and TruthfulQA expose the clearest dataset-specific failures and should remain prominent in follow-up evaluation.",
         "",
     ])
     return "\n".join(lines)
