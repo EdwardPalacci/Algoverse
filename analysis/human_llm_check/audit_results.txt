@@ -1,0 +1,28 @@
+The following results were found by using a Simple Random Sample (SRS) on all the questions processed. 
+
+Through the 7 models used ---
+
+x-ai/grok-4.3, google/gemini-2.5-flash, openai/gpt-4.1-mini (the 3 ALM models), 
+
+and 
+
+inception/mercury-2, Dream-org/Dream-v0-Instruct-7B, GSAI-ML/LLaDA-8B-Instruct, google/diffusiongemma-26B-A4B-it (the 4 DLM models)
+
+we pooled  the 2250 * 7 = 15750 total questions and found a random sample of 200 questions using the random module in python. 
+
+We found that the Cohen's kapp (the gold standard for inter-rate reliability tests) was .9688 between our LLM-as-judge (anthropic/claude-sonnet-4.5) and a human grader. 
+
+In industry, a Cohen's kappa score of >.8 is treated as amazing, and since we achieved a score of .9688, we believe that our LLM-as-judge can be trusted.
+
+This shows that our LLM-as-judge pipeline was highly accurate across all the datasets.
+
+
+========================================
+ INTER-RATER RELIABILITY RESULTS (200 Rows Audited)
+========================================
+Observed Agreement (Po): 0.9850
+Expected Agreement  (Pe): 0.5190
+Cohen's Kappa     (κ): 0.9688
+----------------------------------------
+Interpretation: Almost Perfect Agreement
+========================================
