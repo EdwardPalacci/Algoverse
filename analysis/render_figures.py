@@ -341,14 +341,15 @@ def draw_flow_box(fig: CairoFigure, center_x: float, center_y: float, width: flo
 def write_evaluation_flowchart_figure(path: Path) -> list[dict]:
     fig = CairoFigure(path, width=1100, height=720)
     fig.text(70, 36, "Evaluation pipeline", 22, bold=True)
-    draw_flow_box(fig, 550, 95, 560, 64, "#e8f0fb", ["Input questions", "GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA"])
-    draw_flow_box(fig, 550, 185, 560, 64, "#e9f6ec", ["Prompted evaluation items", "neutral, cautious, overconfident"])
-    draw_flow_box(fig, 330, 305, 340, 72, "#fff0df", ["Autoregressive models", "Gemini, GPT-4.1 mini, Grok"])
-    draw_flow_box(fig, 770, 305, 340, 72, "#fff0df", ["Diffusion models", "Mercury-2, Dream, DiffusionGemma, LLaDA"])
-    draw_flow_box(fig, 550, 425, 560, 64, "#f0e9fb", ["Shared generation schema", "answer, confidence, short explanation"])
-    draw_flow_box(fig, 330, 545, 340, 72, "#eeeeee", ["Correctness grading", "deterministic checks + LLM judge"])
-    draw_flow_box(fig, 770, 545, 340, 72, "#fdeceb", ["Calibration analysis", "ECE, AURC, AUROC, HCWR"])
-    draw_flow_box(fig, 550, 655, 560, 62, "#fff8d9", ["Evaluation outputs", "AR-DLM comparison, accuracy, calibration, prompt sensitivity"])
+    box_fill = "#ffffff"
+    draw_flow_box(fig, 550, 95, 560, 64, box_fill, ["Input questions", "GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA"])
+    draw_flow_box(fig, 550, 185, 560, 64, box_fill, ["Prompted evaluation items", "neutral, cautious, overconfident"])
+    draw_flow_box(fig, 330, 305, 340, 72, box_fill, ["Autoregressive models", "Gemini, GPT-4.1 mini, Grok"])
+    draw_flow_box(fig, 770, 305, 340, 72, box_fill, ["Diffusion models", "Mercury-2, Dream, DiffusionGemma, LLaDA"])
+    draw_flow_box(fig, 550, 425, 560, 64, box_fill, ["Shared generation schema", "answer, confidence, short explanation"])
+    draw_flow_box(fig, 330, 545, 340, 72, box_fill, ["Correctness grading", "deterministic checks + LLM judge"])
+    draw_flow_box(fig, 770, 545, 340, 72, box_fill, ["Calibration analysis", "ECE, AURC, AUROC, HCWR"])
+    draw_flow_box(fig, 550, 655, 560, 62, box_fill, ["Evaluation outputs", "AR-DLM comparison, accuracy, calibration, prompt sensitivity"])
     draw_arrow(fig, 550, 127, 550, 153)
     draw_arrow(fig, 500, 217, 365, 268)
     draw_arrow(fig, 600, 217, 735, 268)
@@ -696,7 +697,7 @@ def produce_figures(rows: list[dict]) -> None:
     write_csv(FIG_CSV_DIR / "figure_1_evaluation_flowchart_data.csv", flowchart_data, ["stage_order", "stage", "output"])
     write_text(
         FIG_CAPTION_DIR / "figure_1_caption.txt",
-        "Figure 1. Evaluation pipeline. Input questions are converted into prompt-conditioned evaluation items, routed through autoregressive language models (AR) and diffusion language models (DLMs), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses.\n",
+        "Figure 1. Evaluation pipeline. Input questions are converted into prompt-conditioned evaluation items, routed through autoregressive language models (AR) and diffusion language models (DLMs), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses. All boxes use identical white fill with black outlines so the diagram remains legible without encoding information by color or shade.\n",
     )
 
     reliability_data = write_reliability_figure(FIG_PNG_DIR / "figure_4_ar_dlm_reliability_diagram.png", rows)
