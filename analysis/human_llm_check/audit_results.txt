@@ -1,28 +1,54 @@
-The following results were found by using a Simple Random Sample (SRS) on all the questions processed. 
+Quick summary: 
 
-Through the 7 models used ---
-
-x-ai/grok-4.3, google/gemini-2.5-flash, openai/gpt-4.1-mini (the 3 ALM models), 
-
-and 
-
-inception/mercury-2, Dream-org/Dream-v0-Instruct-7B, GSAI-ML/LLaDA-8B-Instruct, google/diffusiongemma-26B-A4B-it (the 4 DLM models)
-
-we pooled  the 2250 * 7 = 15750 total questions and found a random sample of 200 questions using the random module in python. 
-
-We found that the Cohen's kapp (the gold standard for inter-rate reliability tests) was .9688 between our LLM-as-judge (anthropic/claude-sonnet-4.5) and a human grader. 
-
-In industry, a Cohen's kappa score of >.8 is treated as amazing, and since we achieved a score of .9688, we believe that our LLM-as-judge can be trusted.
-
-This shows that our LLM-as-judge pipeline was highly accurate across all the datasets.
-
+Cohen's kappa = 0.9688 when industry standard is >.80 = amazing
+Observed agreenment was 0.9850 with a Margin of Error of 1.67%
 
 ========================================
  INTER-RATER RELIABILITY RESULTS (200 Rows Audited)
 ========================================
 Observed Agreement (Po): 0.9850
 Expected Agreement  (Pe): 0.5190
-Cohen's Kappa     (κ): 0.9688
+Cohen's Kappa     (κ): 0.9688   
 ----------------------------------------
 Interpretation: Almost Perfect Agreement
 ========================================
+
+The above results were found by using a Simple Random Sample (SRS) on all the questions processed. 
+
+The 7 models used were, for clarity, ---
+
+x-ai/grok-4.3, 
+google/gemini-2.5-flash, 
+openai/gpt-4.1-mini 
+	for the  3 ALM models and
+inception/mercury-2,
+Dream-org/Dream-v0-Instruct-7B,
+GSAI-ML/LLaDA-8B-Instruct, 
+google/diffusiongemma-26B-A4B-it 
+	for the 4 DLM models.
+
+We pooled  the 2250 * 7 = 15750 total questions and found a random sample of 200 questions using the random module in python. 
+
+We chose a manual grading amount of 200 questions so we could achieve a margin of error (MOE) of at least 6.89% while keeping manual grading feasible. 
+
+Math for the MOE (of a population proportion) : 
+
+	Setting z-score = 1.96 to align with the scientific standard of a 95% confidence interval, then 
+
+	MOE = z * sqrt (p(1-p)/n) * sqrt ( (N-n) / (N-1)
+
+	where p = the proportion of correctly aligned LLM answers (taken as .5 prior to experiment),
+ 	n = the sample size,
+	N = the total population
+
+Afterwards, we can recalculate the MOE using the population proportion actually found, which was p = 0.985, giving a MOE = 1.67%
+
+	MOE = (1.96) * sqrt (.985(1-.985)/200) * sqrt ((15760-200)/(15760-1)) = 0.01673960812
+
+Furthermore,we used Cohen's kappa (the gold standard for inter-rate reliability tests) to isolate the likelihood of chance in agreenment. 
+
+We found that between our LLM-as-judge (anthropic/claude-sonnet-4.5) and a human grader, kappa = .9688.  
+
+In industry, a Cohen's kappa score of >.8 is treated as amazing
+
+
