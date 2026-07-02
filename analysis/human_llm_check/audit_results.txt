@@ -1,7 +1,9 @@
 Quick summary: 
 
 Cohen's kappa = 0.9688 when industry standard is >.80 = amazing
-Observed agreenment was 0.9850 with a Margin of Error of 1.67%
+Observed agreenment was 0.9850 ± 1.67% with 95% confidence.
+
+	In other words, we are 95% confident that the true proportion of LLM-human agreenment lies between (96.83% and 100.00%)
 
 ========================================
  INTER-RATER RELIABILITY RESULTS (200 Rows Audited)
@@ -41,7 +43,7 @@ Math for the MOE (of a population proportion) :
  	n = the sample size,
 	N = the total population
 
-Afterwards, we can recalculate the MOE using the population proportion actually found, which was p = 0.985, giving a MOE = 1.67%
+Afterwards, we can recalculate the MOE using the population proportion actually found, which was p = 0.985, giving a MOE ~1.67%
 
 	MOE = (1.96) * sqrt (.985(1-.985)/200) * sqrt ((15760-200)/(15760-1)) = 0.01673960812
 
