@@ -1,0 +1,8 @@
+model,total,zero_confidence,saturation,parsing_failures,answer_explanation_mismatch
+google__gemini-2.5-flash,2250,4,1704,0,519
+openai__gpt-4.1-mini,2250,0,931,0,584
+x-ai__grok-4.3,2250,2,33,0,671
+Dream-org__Dream-v0-Instruct-7B,2250,348,1548,99,195
+google__diffusiongemma-26B-A4B-it,2250,3,1859,0,568
+GSAI-ML__LLaDA-8B-Instruct,2250,12,1707,0,306
+inception__mercury-2,2250,4,141,33,573
