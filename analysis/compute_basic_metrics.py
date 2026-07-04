@@ -531,7 +531,7 @@ def produce_basic_metric_figures(gens: Iterable[Generation] | None = None) -> No
     )
     write_text(
         FIG_CAPTION_DIR / "figure_3_caption.txt",
-        "Figure 3. Reliability diagrams by prompt condition and model family. Each panel compares autoregressive language models (AR) and diffusion language models (DLMs); points show mean reported confidence and empirical accuracy in each non-empty confidence bin. Points are not connected because adjacent confidence bins can have very different sample sizes. Sparse bins with fewer than 20 rows are labeled directly because their accuracy estimates are unstable.\n",
+        "Figure 3. Reliability diagrams by prompt condition and model family. Rows show cautious, neutral, and overconfident prompts; columns show autoregressive language models (AR) and diffusion language models (DLMs). Points report mean verbalized confidence and empirical accuracy in each non-empty confidence bin. Points are not connected, and bins with at most five observations are labeled directly; all bin counts are available in the companion CSV. The dashed diagonal denotes perfect calibration.\n",
     )
 
 
@@ -577,53 +577,104 @@ def draw_histogram_panel(fig: CairoFigure, left: int, right: int, top: int, bott
 
 def write_reliability_by_condition_figure(path: Path, gens: list[Generation]) -> None:
     rows = reliability_bins_by_condition(gens)
-    fig = CairoFigure(path, width=1120, height=500)
-    fig.text(58, 36, "Reliability by model family and prompt condition", 20, bold=True)
-    for index, condition in enumerate(CONDITION_ORDER):
-        left = 78 + index * 345
-        right = left + 270
-        top = 82
-        bottom = 345
-        condition_rows = [row for row in rows if row["prompt_condition"] == condition]
-        draw_reliability_panel(fig, left, right, top, bottom, condition, condition_rows)
-    draw_family_legend(fig, 330, 444)
-    fig.text(810, 444, "Dashed line: perfect calibration", 12, color="#555555")
+    fig = CairoFigure(path, width=1160, height=1000)
+    fig.text(58, 38, "Reliability by prompt condition and model family", 24, bold=True)
+    panel_lefts = {"AR": 150, "DLM": 660}
+    panel_rights = {"AR": 570, "DLM": 1080}
+    family_titles = {
+        "AR": "Autoregressive language models (AR)",
+        "DLM": "Diffusion language models (DLM)",
+    }
+    for family in FAMILY_ORDER:
+        fig.text(
+            (panel_lefts[family] + panel_rights[family]) / 2,
+            92,
+            family_titles[family],
+            18,
+            FAMILY_COLORS[family],
+            align="center",
+            bold=True,
+        )
+    for condition_index, condition in enumerate(CONDITION_ORDER):
+        top = 135 + condition_index * 265
+        bottom = top + 215
+        fig.text(68, (top + bottom) / 2, condition, 17, align="center", bold=True, rotate=-1.5708)
+        for family in FAMILY_ORDER:
+            left = panel_lefts[family]
+            right = panel_rights[family]
+            panel_rows = [
+                row for row in rows
+                if row["prompt_condition"] == condition
+                and row["model_family"] == family
+            ]
+            draw_reliability_panel(
+                fig,
+                left,
+                right,
+                top,
+                bottom,
+                "",
+                panel_rows,
+                family,
+            )
+    fig.text(615, 965, "Mean verbalized confidence", 18, align="center")
+    fig.text(20, 500, "Empirical accuracy", 18, align="center", rotate=-1.5708)
+    fig.text(870, 965, "Dashed diagonal: perfect calibration", 14, color="#555555")
     fig.write()
 
 
-def draw_reliability_panel(fig: CairoFigure, left: int, right: int, top: int, bottom: int, title: str, rows: list[dict]) -> None:
-    fig.text((left + right) / 2, top - 22, title, 14, align="center", bold=True)
-    for tick in range(6):
-        value = tick / 5
+def draw_reliability_panel(
+    fig: CairoFigure,
+    left: int,
+    right: int,
+    top: int,
+    bottom: int,
+    title: str,
+    rows: list[dict],
+    family: str,
+) -> None:
+    if title:
+        fig.text((left + right) / 2, top - 14, title, 17, align="center", bold=True)
+    for tick in range(5):
+        value = tick / 4
         y = bottom - value * (bottom - top)
         x = left + value * (right - left)
         fig.line(left, y, right, y, "#dddddd", 0.8)
         fig.line(x, top, x, bottom, "#dddddd", 0.8)
-        fig.text(left - 10, y + 4, f"{value:.1f}", 10, "#444444", align="right")
-        fig.text(x, bottom + 20, f"{value:.1f}", 10, "#444444", align="center")
+        fig.text(left - 12, y + 6, f"{value:.2f}", 15, "#444444", align="right")
+        fig.text(x, bottom + 26, f"{value:.2f}", 15, "#444444", align="center")
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
     fig.line(left, bottom, right, top, "#777777", 1.2, dash=(5, 5))
-    for family in FAMILY_ORDER:
-        family_rows = [
-            row for row in rows
-            if row["model_family"] == family
-            and none_if_blank(row["bin_accuracy"]) is not None
-            and none_if_blank(row["bin_confidence"]) is not None
-        ]
-        coords = [
-            (
-                *scale_unit_point(none_if_blank(row["bin_confidence"]), none_if_blank(row["bin_accuracy"]), left, right, top, bottom),
-                int(row["bin_count"]),
-            )
-            for row in family_rows
-        ]
-        for x, y, bin_count in coords:
-            fig.circle(x, y, 4.2, FAMILY_COLORS[family])
-            if 0 < bin_count < 20:
-                fig.text(x + 6, y - 5, f"n={bin_count}", 8, "#333333")
-    fig.text((left + right) / 2, bottom + 48, "Mean confidence", 12, align="center")
-    fig.text(left - 48, (top + bottom) / 2, "Empirical accuracy", 12, align="center", rotate=-1.5708)
+    family_rows = [
+        row for row in rows
+        if none_if_blank(row["bin_accuracy"]) is not None
+        and none_if_blank(row["bin_confidence"]) is not None
+    ]
+    coords = [
+        (
+            *scale_unit_point(none_if_blank(row["bin_confidence"]), none_if_blank(row["bin_accuracy"]), left, right, top, bottom),
+            int(row["bin_count"]),
+        )
+        for row in family_rows
+    ]
+    sparse_index = 0
+    for x, y, bin_count in coords:
+        if family == "AR":
+            fig.circle(x, y, 5.5, FAMILY_COLORS[family])
+        else:
+            fig.rect(x - 5, y - 5, 10, 10, FAMILY_COLORS[family])
+        if 0 < bin_count <= 5:
+            label_y = y - 10
+            if y > bottom - 28:
+                label_y = bottom - 10 - (sparse_index % 2) * 20
+            label_x = x + 9
+            align = "left"
+            if x > right - 44:
+                label_x = x - 9
+                align = "right"
+            fig.text(label_x, label_y, f"n={bin_count}", 13, "#333333", align=align)
+            sparse_index += 1
 
 
 def condition_order(groups) -> list[str]:

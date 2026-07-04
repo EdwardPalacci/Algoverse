@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.py[cod]
+
+# Local paper and research working files are maintained outside GitHub.
+main_colm.tex
+documentation/research_notes/disconfounding_and_rerun_protocol.md

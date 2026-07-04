@@ -18,7 +18,6 @@ from generate_paper_assets import aligned_rows, load_all_rows
 from render_figures import FIG_CSV_DIR, FIG_PNG_DIR, confidence_distribution_data, dataset_metric_data
 from render_figures import prompt_sensitivity_data, risk_coverage_curve_data
 from render_figures import reliability_interval_points
-from render_figures import reliability_points
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,30 +57,6 @@ def check_distribution_csv(path: Path, expected_rows: list[dict]) -> None:
             raise AssertionError(f"{path}: share mismatch")
 
 
-def check_reliability_csv(path: Path, rows: list[dict]) -> None:
-    expected = []
-    for family in ["AR", "DLM"]:
-        for mean_confidence, empirical_accuracy, bin_count in sorted(reliability_points(rows, family)):
-            expected.append({
-                "model_family": family,
-                "mean_confidence": mean_confidence,
-                "empirical_accuracy": empirical_accuracy,
-                "bin_count": bin_count,
-            })
-    actual = read_csv(path)
-    if len(actual) != len(expected):
-        raise AssertionError(f"{path}: row count mismatch")
-    for actual_row, expected_row in zip(actual, expected):
-        if actual_row["model_family"] != expected_row["model_family"]:
-            raise AssertionError(f"{path}: family mismatch")
-        if not close(as_float(actual_row["mean_confidence"]), expected_row["mean_confidence"]):
-            raise AssertionError(f"{path}: mean_confidence mismatch")
-        if not close(as_float(actual_row["empirical_accuracy"]), expected_row["empirical_accuracy"]):
-            raise AssertionError(f"{path}: empirical_accuracy mismatch")
-        if int(actual_row["bin_count"]) != expected_row["bin_count"]:
-            raise AssertionError(f"{path}: bin_count mismatch")
-
-
 def check_reliability_ci_csv(path: Path, rows: list[dict]) -> None:
     expected = []
     for family in ["AR", "DLM"]:
@@ -90,7 +65,7 @@ def check_reliability_ci_csv(path: Path, rows: list[dict]) -> None:
     if len(actual) != len(expected):
         raise AssertionError(f"{path}: row count mismatch")
     for actual_row, expected_row in zip(actual, expected):
-        for key in ["model_family"]:
+        for key in ["model_family", "prompt_condition"]:
             if actual_row[key] != expected_row[key]:
                 raise AssertionError(f"{path}: mismatch in {key}")
         for key in ["bin_count", "correct_count"]:
@@ -140,10 +115,12 @@ def check_dataset_metric_csv(path: Path, rows: list[dict]) -> None:
         for key in ["dataset", "model_family", "metric"]:
             if actual_row[key] != expected_row[key]:
                 raise AssertionError(f"{path}: mismatch in {key}")
-        if int(actual_row["N"]) != expected_row["N"]:
-            raise AssertionError(f"{path}: N mismatch")
-        if not close(as_float(actual_row["value"]), expected_row["value"]):
-            raise AssertionError(f"{path}: metric value mismatch")
+        for key in ["N", "question_count", "model_count"]:
+            if int(actual_row[key]) != expected_row[key]:
+                raise AssertionError(f"{path}: mismatch in {key}")
+        for key in ["value", "ci_low", "ci_high"]:
+            if not close(as_float(actual_row[key]), expected_row[key]):
+                raise AssertionError(f"{path}: mismatch in {key}")
 
 
 def check_basic_histogram_csv(path: Path) -> None:
@@ -194,24 +171,22 @@ def main() -> None:
     check_png(FIG_PNG_DIR / "figure_1_evaluation_flowchart.png")
     check_png(FIG_PNG_DIR / "figure_2_confidence_histogram.png")
     check_png(FIG_PNG_DIR / "figure_3_reliability_diagram.png")
-    check_png(FIG_PNG_DIR / "figure_4_ar_dlm_reliability_diagram.png")
     check_png(FIG_PNG_DIR / "figure_5_confidence_by_correctness.png")
     check_png(FIG_PNG_DIR / "figure_6_confidence_by_correctness_neutral.png")
     check_png(FIG_PNG_DIR / "figure_7_prompt_sensitivity.png")
     check_png(FIG_PNG_DIR / "figure_8_risk_coverage_curve.png")
-    check_png(FIG_PNG_DIR / "figure_9_dataset_metric_heatmap.png")
+    check_png(FIG_PNG_DIR / "figure_9_dataset_metrics_with_ci.png")
     check_png(FIG_PNG_DIR / "figure_10_reliability_diagram_with_ci.png")
 
     check_basic_histogram_csv(FIG_CSV_DIR / "figure_2_confidence_histogram_data.csv")
     check_basic_reliability_csv(FIG_CSV_DIR / "figure_3_reliability_diagram_data.csv")
-    check_reliability_csv(FIG_CSV_DIR / "figure_4_ar_dlm_reliability_diagram_data.csv", rows)
-    check_reliability_ci_csv(FIG_CSV_DIR / "figure_10_reliability_diagram_with_ci_data.csv", rows)
-    check_distribution_csv(FIG_CSV_DIR / "figure_5_confidence_by_correctness_data.csv", confidence_distribution_data(rows))
     neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
+    check_reliability_ci_csv(FIG_CSV_DIR / "figure_10_reliability_diagram_with_ci_data.csv", neutral_rows)
+    check_distribution_csv(FIG_CSV_DIR / "figure_5_confidence_by_correctness_data.csv", confidence_distribution_data(rows))
     check_distribution_csv(FIG_CSV_DIR / "figure_6_confidence_by_correctness_neutral_data.csv", confidence_distribution_data(neutral_rows))
     check_prompt_sensitivity_csv(FIG_CSV_DIR / "figure_7_prompt_sensitivity_data.csv", rows)
     check_risk_coverage_csv(FIG_CSV_DIR / "figure_8_risk_coverage_curve_data.csv", rows)
-    check_dataset_metric_csv(FIG_CSV_DIR / "figure_9_dataset_metric_heatmap_data.csv", rows)
+    check_dataset_metric_csv(FIG_CSV_DIR / "figure_9_dataset_metrics_with_ci_data.csv", rows)
 
     for schema_path in ["schema_evaluation_items.json", "schema_generations.json", "schema_metrics.json"]:
         json.loads((DOCS_DIR / schema_path).read_text())

@@ -5,6 +5,7 @@ import ctypes
 import ctypes.util
 import math
 import os
+import random
 from pathlib import Path
 
 os.environ.setdefault("XDG_CACHE_HOME", "/tmp")
@@ -15,6 +16,8 @@ FIG_PNG_DIR = FIG_DIR / "pngs"
 FIG_CSV_DIR = FIG_DIR / "csvs"
 FIG_CAPTION_DIR = FIG_DIR / "captions"
 ECE_BINS = 10
+BOOTSTRAP_ITERATIONS = 1000
+BOOTSTRAP_SEED = 20260701
 
 COLORS = {
     "Autoregressive (AR)": "#2f65a7",
@@ -88,29 +91,6 @@ def aurc(rows: list[dict]) -> float | None:
     return mean(risks)
 
 
-def reliability_points(rows: list[dict], family: str) -> list[tuple[float, float, int]]:
-    points = []
-    family_rows = [
-        row for row in rows
-        if row["model_family"] == family
-        and row.get("parsed_confidence") is not None
-    ]
-    for bin_index in range(ECE_BINS):
-        low = bin_index / ECE_BINS
-        high = (bin_index + 1) / ECE_BINS
-        if bin_index == ECE_BINS - 1:
-            bucket = [row for row in family_rows if low <= row["parsed_confidence"] <= high]
-        else:
-            bucket = [row for row in family_rows if low <= row["parsed_confidence"] < high]
-        if bucket:
-            points.append((
-                mean(row["parsed_confidence"] for row in bucket),
-                mean(1.0 if row["correct_auto"] else 0.0 for row in bucket),
-                len(bucket),
-            ))
-    return points
-
-
 def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
     """Wilson binomial interval for empirical accuracy."""
     if total <= 0:
@@ -130,6 +110,8 @@ def reliability_interval_points(rows: list[dict], family: str) -> list[dict]:
         and row.get("correct_auto") is not None
     ]
     output = []
+    conditions = sorted({row["prompt_condition"] for row in family_rows})
+    prompt_condition = conditions[0] if len(conditions) == 1 else "pooled"
     for bin_index in range(ECE_BINS):
         low = bin_index / ECE_BINS
         high = (bin_index + 1) / ECE_BINS
@@ -144,6 +126,7 @@ def reliability_interval_points(rows: list[dict], family: str) -> list[dict]:
         ci_low, ci_high = wilson_interval(correct, len(bucket))
         output.append({
             "model_family": family,
+            "prompt_condition": prompt_condition,
             "bin_low": low,
             "bin_high": high,
             "mean_confidence": mean(row["parsed_confidence"] for row in bucket),
@@ -289,18 +272,28 @@ class CairoFigure:
         self.image.save(self.path)
 
 
-def draw_common_axes(fig: CairoFigure, left: int, right: int, top: int, bottom: int, x_label: str, y_label: str) -> None:
+def draw_common_axes(
+    fig: CairoFigure,
+    left: int,
+    right: int,
+    top: int,
+    bottom: int,
+    x_label: str,
+    y_label: str,
+    tick_size: int = 12,
+    label_size: int = 15,
+) -> None:
     for index in range(6):
         value = index / 5
         x, y = scale_point(value, value, left, right, top, bottom)
         fig.line(left, y, right, y, "#dddddd", 0.8)
         fig.line(x, top, x, bottom, "#dddddd", 0.8)
-        fig.text(x, bottom + 22, f"{value:.1f}", 12, "#444444", align="center")
-        fig.text(left - 12, y + 4, f"{value:.1f}", 12, "#444444", align="right")
+        fig.text(x, bottom + 22, f"{value:.1f}", tick_size, "#444444", align="center")
+        fig.text(left - 12, y + 4, f"{value:.1f}", tick_size, "#444444", align="right")
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
-    fig.text((left + right) / 2, bottom + 52, x_label, 15, align="center")
-    fig.text(28, (top + bottom) / 2, y_label, 15, align="center", rotate=-math.pi / 2)
+    fig.text((left + right) / 2, bottom + 52, x_label, label_size, align="center")
+    fig.text(28, (top + bottom) / 2, y_label, label_size, align="center", rotate=-math.pi / 2)
 
 
 def draw_legend(fig: CairoFigure, labels: list[str], x: int, y: int) -> None:
@@ -428,41 +421,21 @@ def write_distribution_figure(path: Path, rows: list[dict], title: str) -> None:
     fig.write()
 
 
-def write_reliability_figure(path: Path, rows: list[dict]) -> list[dict]:
-    left, right, top, bottom = 92, 650, 72, 440
-    fig = CairoFigure(path)
-    fig.text(92, 34, "Reliability diagram", 20, bold=True)
-    draw_common_axes(fig, left, right, top, bottom, "Mean verbalized confidence", "Empirical accuracy")
-    x0, y0 = scale_point(0, 0, left, right, top, bottom)
-    x1, y1 = scale_point(1, 1, left, right, top, bottom)
-    fig.line(x0, y0, x1, y1, "#777777", 1.2, dash=(5, 5))
-    output = []
-    labels = [("AR", "Autoregressive (AR)"), ("DLM", "Diffusion language model (DLM)")]
-    for family, label in labels:
-        points = sorted(reliability_points(rows, family))
-        coords = [scale_point(x, y, left, right, top, bottom) for x, y, _count in points]
-        for (px, py), (qx, qy) in zip(coords, coords[1:]):
-            fig.line(px, py, qx, qy, COLORS[label], 2.2)
-        for mean_confidence, empirical_accuracy, bin_count in points:
-            x, y = scale_point(mean_confidence, empirical_accuracy, left, right, top, bottom)
-            fig.circle(x, y, 4.2, COLORS[label])
-            output.append({
-                "model_family": family,
-                "mean_confidence": mean_confidence,
-                "empirical_accuracy": empirical_accuracy,
-                "bin_count": bin_count,
-            })
-    draw_legend(fig, [label for _, label in labels], 690, 88)
-    fig.text(690, 180, "Dashed line: perfect calibration", 13)
-    fig.write()
-    return output
-
-
 def write_reliability_ci_figure(path: Path, rows: list[dict]) -> list[dict]:
-    left, right, top, bottom = 100, 690, 78, 470
-    fig = CairoFigure(path, width=1040, height=620)
-    fig.text(72, 38, "Reliability diagram with binomial confidence intervals", 20, bold=True)
-    draw_common_axes(fig, left, right, top, bottom, "Mean verbalized confidence", "Empirical accuracy")
+    left, right, top, bottom = 100, 690, 82, 480
+    fig = CairoFigure(path, width=1040, height=630)
+    fig.text(72, 40, "Neutral-prompt reliability", 22, bold=True)
+    draw_common_axes(
+        fig,
+        left,
+        right,
+        top,
+        bottom,
+        "Mean verbalized confidence",
+        "Empirical accuracy",
+        tick_size=14,
+        label_size=17,
+    )
     x0, y0 = scale_point(0, 0, left, right, top, bottom)
     x1, y1 = scale_point(1, 1, left, right, top, bottom)
     fig.line(x0, y0, x1, y1, "#777777", 1.2, dash=(5, 5))
@@ -479,13 +452,22 @@ def write_reliability_ci_figure(path: Path, rows: list[dict]) -> list[dict]:
             fig.line(x, y_low, x, y_high, COLORS[label], 1.6)
             fig.line(x - 5, y_low, x + 5, y_low, COLORS[label], 1.2)
             fig.line(x - 5, y_high, x + 5, y_high, COLORS[label], 1.2)
-            fig.circle(x, y, 4.5, COLORS[label])
-            fig.text(x + 7, y - 6, f"n={row['bin_count']}", 8, "#333333")
+            if family == "AR":
+                fig.circle(x, y, 5.0, COLORS[label])
+            else:
+                fig.rect(x - 5, y - 5, 10, 10, COLORS[label])
+            if row["bin_count"] < 20:
+                label_y = y + 18 if y < top + 24 else y - 8
+                fig.text(x + 8, label_y, f"n={row['bin_count']}", 10, "#333333")
 
-    draw_legend(fig, [label for _, label in labels], 730, 92)
-    fig.text(730, 186, "Vertical bars: Wilson 95% CI", 12, "#555555")
-    fig.text(730, 206, "for empirical bin accuracy.", 12, "#555555")
-    fig.text(730, 236, "Labels show bin counts.", 12, "#555555")
+    fig.circle(735, 104, 5.0, COLORS["Autoregressive (AR)"])
+    fig.text(752, 109, "AR: pooled across 3 models", 14)
+    fig.rect(730, 130, 10, 10, COLORS["Diffusion language model (DLM)"])
+    fig.text(752, 141, "DLM: pooled across 4 models", 14)
+    fig.text(730, 190, "Vertical bars: Wilson 95% CI", 13, "#555555")
+    fig.text(730, 214, "for empirical bin accuracy.", 13, "#555555")
+    fig.text(730, 250, "Sparse bins (n < 20) are labeled.", 13, "#555555")
+    fig.text(730, 286, "Dashed diagonal: perfect calibration.", 13, "#555555")
     fig.write()
     return output
 
@@ -597,68 +579,142 @@ def dataset_metric_data(rows: list[dict]) -> list[dict]:
             subset = [row for row in rows if row["dataset"] == dataset and row["model_family"] == family]
             if not subset:
                 continue
+            intervals = dataset_metric_intervals(subset, dataset, family)
             correct = [1.0 if row["correct_auto"] else 0.0 for row in subset if row.get("correct_auto") is not None]
             output.append({
                 "dataset": dataset,
                 "model_family": family,
                 "metric": "Accuracy",
                 "value": mean(correct) or 0.0,
+                "ci_low": intervals["Accuracy"][0],
+                "ci_high": intervals["Accuracy"][1],
                 "N": len(subset),
+                "question_count": len({row["question_id"] for row in subset}),
+                "model_count": len({row["model_id"] for row in subset}),
             })
             output.append({
                 "dataset": dataset,
                 "model_family": family,
                 "metric": "ECE",
                 "value": ece(subset) or 0.0,
+                "ci_low": intervals["ECE"][0],
+                "ci_high": intervals["ECE"][1],
                 "N": len(subset),
+                "question_count": len({row["question_id"] for row in subset}),
+                "model_count": len({row["model_id"] for row in subset}),
             })
     return output
 
 
-def heat_color(value: float, metric: str) -> str:
-    value = max(0.0, min(value, 1.0))
-    if metric == "Accuracy":
-        base = (46, 101, 167)
-    else:
-        base = (196, 90, 60)
-    blend = 0.18 + 0.82 * value
-    rgb = tuple(round(255 * (1 - blend) + channel * blend) for channel in base)
-    return "#{:02x}{:02x}{:02x}".format(*rgb)
+def dataset_metric_intervals(
+    rows: list[dict],
+    dataset: str,
+    family: str,
+) -> dict[str, tuple[float, float]]:
+    """Question-cluster bootstrap intervals for pooled family metrics."""
+    by_question: dict[str, list[dict]] = {}
+    for row in rows:
+        by_question.setdefault(row["question_id"], []).append(row)
+    question_ids = sorted(by_question)
+    seed_text = f"{dataset}|{family}"
+    rng = random.Random(BOOTSTRAP_SEED + sum(ord(char) for char in seed_text))
+    samples = {"Accuracy": [], "ECE": []}
+
+    for _index in range(BOOTSTRAP_ITERATIONS):
+        sampled_rows = []
+        for question_id in (rng.choice(question_ids) for _ in question_ids):
+            sampled_rows.extend(by_question[question_id])
+        correctness = [
+            1.0 if row["correct_auto"] else 0.0
+            for row in sampled_rows
+            if row.get("correct_auto") is not None
+        ]
+        accuracy = mean(correctness)
+        calibration_error = ece(sampled_rows)
+        if accuracy is not None:
+            samples["Accuracy"].append(accuracy)
+        if calibration_error is not None:
+            samples["ECE"].append(calibration_error)
+
+    point_values = {
+        "Accuracy": mean(
+            1.0 if row["correct_auto"] else 0.0
+            for row in rows
+            if row.get("correct_auto") is not None
+        ) or 0.0,
+        "ECE": ece(rows) or 0.0,
+    }
+    intervals = {}
+    for metric, values in samples.items():
+        center = mean(values) or 0.0
+        variance = sum((value - center) ** 2 for value in values) / max(1, len(values) - 1)
+        standard_error = math.sqrt(variance)
+        point = point_values[metric]
+        intervals[metric] = (
+            max(0.0, point - 1.96 * standard_error),
+            min(1.0, point + 1.96 * standard_error),
+        )
+    return intervals
 
 
-def write_dataset_metric_heatmap(path: Path, rows: list[dict]) -> list[dict]:
+def write_dataset_metric_figure(path: Path, rows: list[dict]) -> list[dict]:
     data = dataset_metric_data(rows)
     datasets = sorted({row["dataset"] for row in data})
-    families = ["AR", "DLM"]
-    metrics = ["Accuracy", "ECE"]
-    fig = CairoFigure(path, width=1180, height=680)
-    fig.text(82, 42, "Dataset-level accuracy and calibration", 22, bold=True)
-    cell_w, cell_h = 132, 66
-    start_x, start_y = 270, 128
-    panel_gap = 340
-    for metric_index, metric in enumerate(metrics):
-        panel_x = start_x + metric_index * panel_gap
-        fig.text(panel_x + cell_w, 90, metric, 17, bold=True, align="center")
-        for family_index, family in enumerate(families):
-            fig.text(panel_x + family_index * cell_w + cell_w / 2, 116, family, 13, "#444444", align="center")
+    panels = [
+        ("Accuracy", "Accuracy", "Proportion correct", 205, 610),
+        ("ECE", "Expected calibration error (ECE)", "ECE (lower is better)", 720, 1125),
+    ]
+    families = [
+        ("AR", "Autoregressive (AR)", -10),
+        ("DLM", "Diffusion language model (DLM)", 10),
+    ]
+    fig = CairoFigure(path, width=1180, height=660)
+    fig.text(60, 38, "Dataset-level accuracy and calibration", 23, bold=True)
+    fig.circle(310, 78, 5.5, COLORS["Autoregressive (AR)"])
+    fig.text(328, 84, "AR: pooled across 3 models", 15)
+    fig.rect(630, 72, 11, 11, COLORS["Diffusion language model (DLM)"])
+    fig.text(650, 84, "DLM: pooled across 4 models", 15)
+
+    start_y = 160
+    row_gap = 76
+    top = 124
+    bottom = 520
+    for metric, title, x_label, left, right in panels:
+        fig.text((left + right) / 2, 116, title, 18, align="center", bold=True)
+        for tick_index in range(5):
+            value = tick_index / 4
+            x = left + value * (right - left)
+            fig.line(x, top, x, bottom, "#dddddd", 0.8)
+            fig.text(x, bottom + 26, f"{value:.2f}", 14, "#444444", align="center")
+        fig.line(left, bottom, right, bottom)
+        fig.text((left + right) / 2, bottom + 58, x_label, 16, align="center")
+
         for dataset_index, dataset in enumerate(datasets):
-            y = start_y + dataset_index * cell_h
-            if metric_index == 0:
-                fig.text(242, y + 41, dataset, 14, "#333333", align="right")
-            for family_index, family in enumerate(families):
-                value = next(
-                    row["value"] for row in data
+            center_y = start_y + dataset_index * row_gap
+            fig.line(left, center_y, right, center_y, "#eeeeee", 0.8)
+            if metric == "Accuracy":
+                fig.text(180, center_y + 5, dataset, 16, "#333333", align="right")
+            for family, color_label, y_offset in families:
+                row = next(
+                    row for row in data
                     if row["dataset"] == dataset
                     and row["model_family"] == family
                     and row["metric"] == metric
                 )
-                x = panel_x + family_index * cell_w
-                fig.rect(x, y, cell_w - 4, cell_h - 4, heat_color(value, metric))
-                fig.text(x + cell_w / 2 - 2, y + 42, f"{value:.2f}", 16, "#ffffff", align="center", bold=True)
-    fig.text(76, start_y + len(datasets) * cell_h / 2, "Dataset", 15, align="center", rotate=-math.pi / 2)
-    fig.text(start_x + cell_w, 610, "Model family", 14, "#444444", align="center")
-    fig.text(start_x + panel_gap + cell_w, 610, "Model family", 14, "#444444", align="center")
-    fig.text(82, 650, "Accuracy uses saved correctness labels. ECE uses 10 equal-width confidence bins.", 13, "#555555")
+                y = center_y + y_offset
+                x_low = left + row["ci_low"] * (right - left)
+                x_high = left + row["ci_high"] * (right - left)
+                x = left + row["value"] * (right - left)
+                fig.line(x_low, y, x_high, y, COLORS[color_label], 2.0)
+                fig.line(x_low, y - 5, x_low, y + 5, COLORS[color_label], 1.4)
+                fig.line(x_high, y - 5, x_high, y + 5, COLORS[color_label], 1.4)
+                if family == "AR":
+                    fig.circle(x, y, 5.5, COLORS[color_label])
+                else:
+                    fig.rect(x - 5, y - 5, 10, 10, COLORS[color_label])
+
+    fig.text(45, (top + bottom) / 2, "Dataset", 16, align="center", rotate=-math.pi / 2)
+    fig.text(60, 625, "Bars show 95% bootstrap standard-error intervals over question identifiers.", 14, "#555555")
     fig.write()
     return data
 
@@ -700,22 +756,19 @@ def produce_figures(rows: list[dict]) -> None:
         "Figure 1. Evaluation pipeline. Input questions are converted into prompt-conditioned evaluation items, routed through autoregressive language models (AR) and diffusion language models (DLMs), normalized into a shared generation schema, and evaluated through common correctness-grading and calibration analyses. All boxes use identical white fill with black outlines so the diagram remains legible without encoding information by color or shade.\n",
     )
 
-    reliability_data = write_reliability_figure(FIG_PNG_DIR / "figure_4_ar_dlm_reliability_diagram.png", rows)
-    write_csv(FIG_CSV_DIR / "figure_4_ar_dlm_reliability_diagram_data.csv", reliability_data, ["model_family", "mean_confidence", "empirical_accuracy", "bin_count"])
-    write_text(
-        FIG_CAPTION_DIR / "figure_4_caption.txt",
-        "Figure 4. AR/DLM reliability diagram pooled across neutral, cautious, and overconfident prompt conditions using 10 equal-width bins of verbalized confidence normalized to [0, 1]. Empty bins are omitted. The dashed diagonal denotes perfect calibration, where empirical accuracy equals mean confidence. Curves compare autoregressive language models (AR) and diffusion language models (DLMs) using the saved LLM-as-judge correctness labels. Bin counts are saved in the companion CSV because sparse bins can produce visually extreme points.\n",
+    neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
+    reliability_ci_data = write_reliability_ci_figure(
+        FIG_PNG_DIR / "figure_10_reliability_diagram_with_ci.png",
+        neutral_rows,
     )
-
-    reliability_ci_data = write_reliability_ci_figure(FIG_PNG_DIR / "figure_10_reliability_diagram_with_ci.png", rows)
     write_csv(
         FIG_CSV_DIR / "figure_10_reliability_diagram_with_ci_data.csv",
         reliability_ci_data,
-        ["model_family", "bin_low", "bin_high", "mean_confidence", "empirical_accuracy", "bin_count", "correct_count", "accuracy_ci_low", "accuracy_ci_high"],
+        ["model_family", "prompt_condition", "bin_low", "bin_high", "mean_confidence", "empirical_accuracy", "bin_count", "correct_count", "accuracy_ci_low", "accuracy_ci_high"],
     )
     write_text(
         FIG_CAPTION_DIR / "figure_10_caption.txt",
-        "Figure 10. Appendix reliability diagram matching Figure 4, but with Wilson 95% binomial confidence intervals for empirical accuracy in each confidence bin. The x-axis is mean reported confidence within the bin, the y-axis is empirical accuracy, vertical bars show the confidence interval, and point labels report bin counts.\n",
+        "Figure 10. Neutral-prompt reliability diagram comparing autoregressive language models (AR), pooled across three models, with diffusion language models (DLMs), pooled across four models. Points show mean verbalized confidence and empirical accuracy within 10 equal-width confidence bins; rows without parsed confidence are omitted. Vertical bars show Wilson 95% confidence intervals for empirical bin accuracy; sparse bins with fewer than 20 observations are labeled. The dashed diagonal denotes perfect calibration.\n",
     )
 
     write_distribution_figure(FIG_PNG_DIR / "figure_5_confidence_by_correctness.png", rows, "Reported confidence by answer outcome")
@@ -726,7 +779,6 @@ def produce_figures(rows: list[dict]) -> None:
         "Figure 5. Reported confidence distributions for correct and wrong answers. The x-axis bins each model answer by its reported confidence on the normalized [0, 1] scale. The y-axis gives the share of answers from the indicated group that fall in each confidence bin; within each legend group, the bars sum to one across bins. Correct and wrong answers are assigned by the saved LLM-as-judge labels. AR denotes autoregressive language models and DLM denotes diffusion language models. A concentration of wrong-answer bars near confidence 1.0 indicates high-confidence errors.\n",
     )
 
-    neutral_rows = [row for row in rows if row["prompt_condition"] == "neutral"]
     write_distribution_figure(FIG_PNG_DIR / "figure_6_confidence_by_correctness_neutral.png", neutral_rows, "Reported confidence by answer outcome: neutral prompt")
     neutral_data = confidence_distribution_data(neutral_rows)
     write_csv(FIG_CSV_DIR / "figure_6_confidence_by_correctness_neutral_data.csv", neutral_data, ["group", "model_family", "correct", "bin_low", "bin_high", "count", "group_total", "share"])
@@ -749,9 +801,13 @@ def produce_figures(rows: list[dict]) -> None:
         "Figure 8. Risk-coverage curves by model family. Generations are sorted from highest to lowest reported confidence, and each point reports the empirical error rate among retained generations at a given coverage level. Lower curves indicate better confidence-based selective prediction and support the AURC values reported in the metric tables.\n",
     )
 
-    heatmap_data = write_dataset_metric_heatmap(FIG_PNG_DIR / "figure_9_dataset_metric_heatmap.png", rows)
-    write_csv(FIG_CSV_DIR / "figure_9_dataset_metric_heatmap_data.csv", heatmap_data, ["dataset", "model_family", "metric", "value", "N"])
+    dataset_data = write_dataset_metric_figure(FIG_PNG_DIR / "figure_9_dataset_metrics_with_ci.png", rows)
+    write_csv(
+        FIG_CSV_DIR / "figure_9_dataset_metrics_with_ci_data.csv",
+        dataset_data,
+        ["dataset", "model_family", "metric", "value", "ci_low", "ci_high", "N", "question_count", "model_count"],
+    )
     write_text(
         FIG_CAPTION_DIR / "figure_9_caption.txt",
-        "Figure 9. Dataset-level accuracy and expected calibration error by model family. Values are computed from the aligned judged generations. The heatmap highlights that aggregate metrics hide substantial dataset-level variation, especially on SimpleQA.\n",
+        "Figure 9. Dataset-level accuracy and expected calibration error (ECE) by model family, pooled across all three prompt conditions. AR pools three autoregressive models and DLM pools four diffusion language models. Accuracy uses all judged generations; ECE uses generations with parsed confidence. Points are family-level estimates; horizontal bars are 95% bootstrap standard-error intervals over question identifiers, preserving all models, prompt conditions, and repeated generations associated with each resampled question. Higher accuracy and lower ECE are better.\n",
     )
