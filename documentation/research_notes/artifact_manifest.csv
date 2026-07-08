@@ -105,3 +105,10 @@ analysis/check_review_artifacts.py,code,Paper asset validation script,Artifact,t
 analysis/compute_basic_metrics.py,code,Figure 2 and Figure 3 metric rendering helpers,Artifact,true,true
 analysis/render_figures.py,code,Figure rendering helpers,Artifact,true,true
 analysis/llm_as_judge/llm_as_judge.py,code,Canonical LLM-as-judge script,Artifact,true,true
+analysis/human_llm_check/raw_200_sample.jsonl,artifact,Frozen 200-row human audit sample,Results,true,true
+analysis/human_llm_check/perfect_audit_sheet.csv,artifact,Completed human-vs-LLM judge audit sheet,Results,true,true
+analysis/human_llm_check/audit_results.txt,artifact,Human-vs-LLM judge agreement summary,Results,true,true
+analysis/human_llm_check/calculate_kappa.py,code,Human-vs-LLM judge agreement calculation script,Artifact,true,true
+analysis/human_llm_check/generate_audit.py,code,Deterministic human-audit sample generation script,Artifact,true,true
+documentation/research_notes/human_llm_agreement_audit.md,documentation,Human-vs-LLM judge agreement audit notes,Results,true,true
+documentation/research_notes/evidence_to_claims.md,documentation,Figure/table evidence-to-claims map for paper analysis,Results,true,true

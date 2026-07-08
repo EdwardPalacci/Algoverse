@@ -1,77 +1,163 @@
-import os
+import argparse
+import csv
 import glob
 import json
+import os
 import random
-import csv
 
-base_dirs = ['analysis/llm_as_judge/results/*.jsonl', 'llm_as_judge/results/*.jsonl', 'results/*.jsonl']
-files = []
-for pattern in base_dirs:
-    files.extend(glob.glob(pattern))
 
-if not files:
-    files = glob.glob('**/*.jsonl', recursive=True)
+DEFAULT_SEED = 42
+DEFAULT_SAMPLE_SIZE = 200
+DEFAULT_PATTERNS = [
+    "analysis/llm_as_judge/results/*/by_model/*/all_datasets.jsonl",
+    "analysis/llm_as_judge/results/*.jsonl",
+    "llm_as_judge/results/*.jsonl",
+    "results/*.jsonl",
+]
 
-valid_lines = []
-for f in files:
-    try:
-        with open(f, 'r', encoding='utf-8') as src:
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Create a reproducible sample for human-vs-LLM judge auditing."
+    )
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--sample-size", type=int, default=DEFAULT_SAMPLE_SIZE)
+    parser.add_argument(
+        "--output-dir",
+        default="analysis/human_llm_check",
+        help="Directory for raw sample and audit-sheet CSVs.",
+    )
+    return parser.parse_args()
+
+
+def iter_judged_records():
+    files = []
+    for pattern in DEFAULT_PATTERNS:
+        files.extend(glob.glob(pattern))
+
+    if not files:
+        files = glob.glob("**/*.jsonl", recursive=True)
+
+    # Use all_datasets files when present to avoid sampling duplicate by-dataset rows.
+    all_dataset_files = [path for path in files if path.endswith("/all_datasets.jsonl")]
+    if all_dataset_files:
+        files = all_dataset_files
+
+    seen_keys = set()
+    for path in sorted(set(files)):
+        with open(path, "r", encoding="utf-8") as src:
             for line in src:
                 if not line.strip():
                     continue
                 try:
-                    data = json.loads(line)
-                    # Filter: Must be parsed successfully AND must have a verdict from the judge
-                    if data.get('parse_success') is True and data.get('judge_verdict'):
-                        valid_lines.append(data)
-                except Exception:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
                     continue
-    except Exception:
-        continue
 
-if not valid_lines:
-    print("[-] Error: No records found that have BOTH parse_success=True and a judge_verdict.")
-    exit(1)
+                if record.get("parse_success") is not True:
+                    continue
+                if record.get("judge_verdict") not in {"correct", "incorrect"}:
+                    continue
 
-print(f"[+] Found {len(valid_lines)} fully judged records. Sampling 200...")
+                key = (
+                    record.get("model_name"),
+                    record.get("dataset"),
+                    record.get("question_id"),
+                    record.get("condition"),
+                    record.get("sample_id"),
+                )
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                yield record
 
-sample_size = min(200, len(valid_lines))
-sample_data = random.sample(valid_lines, sample_size)
 
-os.makedirs('analysis/human_llm_check', exist_ok=True)
-
-with open('analysis/human_llm_check/raw_200_sample.jsonl', 'w', encoding='utf-8') as out:
-    for item in sample_data:
-        out.write(json.dumps(item) + '\n')
-
-fields = ['question_id', 'dataset', 'condition', 'model_name', 'prompt', 'ground_truth', 'answer_type', 'confidence', 'short_explanation', 'model_answer', 'judge_verdict', 'judge_reason', 'human_verdict']
-
-csv_path = 'analysis/human_llm_check/perfect_audit_sheet.csv'
-with open(csv_path, 'w', encoding='utf-8', newline='') as f:
-    writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
-    writer.writerow(fields)
-    
-    for data in sample_data:
+def extract_model_answer(record):
+    answer = record.get("model_answer")
+    if answer is None:
+        answer = record.get("answer")
+    if isinstance(answer, str) and answer.strip().startswith("{"):
         try:
+            answer = json.loads(answer).get("answer", answer)
+        except json.JSONDecodeError:
+            pass
+    return "" if answer is None else str(answer)
+
+
+def write_csv(path, rows, fields, include_human_column=True):
+    with open(path, "w", encoding="utf-8", newline="") as out:
+        writer = csv.writer(out, delimiter=",", quotechar='"', quoting=csv.QUOTE_ALL)
+        writer.writerow(fields)
+        for record in rows:
             row = []
             for field in fields:
-                if field == 'human_verdict':
-                    row.append('')
-                elif field == 'model_answer':
-                    ans = data.get('model_answer')
-                    if ans is None:
-                        ans = data.get('answer')
-                    if isinstance(ans, str) and ans.strip().startswith('{'):
-                        try:
-                            inner = json.loads(ans)
-                            ans = inner.get('answer', ans)
-                        except Exception:
-                            pass
-                    row.append(str(ans if ans is not None else ''))
+                if field == "human_verdict" and include_human_column:
+                    row.append("")
+                elif field == "model_answer":
+                    row.append(extract_model_answer(record))
                 else:
-                    row.append(str(data.get(field, '')))
+                    row.append(str(record.get(field, "")))
             writer.writerow(row)
-        except Exception:
-            continue
 
-print(f"[+] Complete. Every row is guaranteed to have a verdict. Saved to: {csv_path}")
+
+def main():
+    args = parse_args()
+    records = list(iter_judged_records())
+    if not records:
+        raise SystemExit("No parsed judged records found.")
+
+    sample_size = min(args.sample_size, len(records))
+    rng = random.Random(args.seed)
+    sample = rng.sample(records, sample_size)
+
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    raw_path = os.path.join(args.output_dir, "raw_200_sample.jsonl")
+    with open(raw_path, "w", encoding="utf-8") as out:
+        for item in sample:
+            out.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+    blind_fields = [
+        "question_id",
+        "dataset",
+        "condition",
+        "model_name",
+        "prompt",
+        "ground_truth",
+        "answer_type",
+        "confidence",
+        "short_explanation",
+        "model_answer",
+        "human_verdict",
+    ]
+    review_fields = blind_fields[:-1] + [
+        "judge_verdict",
+        "judge_reason",
+        "human_verdict",
+    ]
+
+    write_csv(
+        os.path.join(args.output_dir, "blind_audit_sheet.csv"),
+        sample,
+        blind_fields,
+    )
+    write_csv(
+        os.path.join(args.output_dir, "perfect_audit_sheet.csv"),
+        sample,
+        review_fields,
+    )
+
+    metadata_path = os.path.join(args.output_dir, "sample_metadata.txt")
+    with open(metadata_path, "w", encoding="utf-8") as out:
+        out.write(f"seed={args.seed}\n")
+        out.write(f"sample_size={sample_size}\n")
+        out.write(f"sample_frame_records={len(records)}\n")
+        out.write("sampling_method=simple random sample over parsed judged generations\n")
+
+    print(f"Sampled {sample_size} rows from {len(records)} judged records.")
+    print(f"Seed: {args.seed}")
+    print(f"Saved raw sample to {raw_path}")
+
+
+if __name__ == "__main__":
+    main()

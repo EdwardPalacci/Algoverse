@@ -1,98 +1,144 @@
 import csv
 import math
+from collections import Counter
 
-csv_path = 'analysis/human_llm_check/perfect_audit_sheet.csv'
 
-human_votes = []
-judge_votes = []
+CSV_PATH = "analysis/human_llm_check/perfect_audit_sheet.csv"
+OUTPUT_PATH = "analysis/human_llm_check/audit_results.txt"
+POPULATION_SIZE = 15_750
+VALID_LABELS = {"correct", "incorrect"}
 
-with open(csv_path, 'r', encoding='utf-8') as f:
-    # Read all lines and filter out any math garbage at the start
-    lines = [line for line in f if 'dataset' in line or 'verdict' in line or ',' in line]
-    
-    # Reconstruct the reader from clean lines
-    reader = csv.reader(lines)
-    
-    # Find the actual header row dynamically
-    header = None
-    for row in reader:
-        if 'human_verdict' in row and 'judge_verdict' in row:
-            header = row
-            break
-            
-    if not header:
-        print("[-] Error: Hard-coding indices because headers are buried in math text.")
-        header = ['question_id', 'dataset', 'condition', 'model_name', 'prompt', 'ground_truth', 'answer_type', 'confidence', 'short_explanation', 'model_answer', 'judge_verdict', 'judge_reason', 'human_verdict']
-    
-    h_idx = header.index('human_verdict')
-    j_idx = header.index('judge_verdict')
-    for row in reader:
-        if len(row) <= max(h_idx, j_idx):
-            continue
-            
-        h = row[h_idx].strip().lower()
-        j = row[j_idx].strip().lower()
-        
-        if h in ['correct', 'incorrect'] and j in ['correct', 'incorrect']:
-            human_votes.append(h)
-            judge_votes.append(j)
 
-total = len(human_votes)
-if total == 0:
-    print("[-] Error: No matched rows found with both human and judge verdicts completed.")
-    exit(1)
+def wilson_interval(successes, total, z=1.96):
+    if total == 0:
+        return (0.0, 0.0)
+    phat = successes / total
+    denom = 1.0 + z * z / total
+    center = (phat + z * z / (2.0 * total)) / denom
+    half_width = (
+        z
+        * math.sqrt((phat * (1.0 - phat) + z * z / (4.0 * total)) / total)
+        / denom
+    )
+    return (max(0.0, center - half_width), min(1.0, center + half_width))
 
-# Get unique categories
-categories = list(set(human_votes + judge_votes))
 
-# Calculate Observed Agreement (Po)
-matches = sum(1 for h, j in zip(human_votes, judge_votes) if h == j)
-p_o = matches / total
+def normal_moe_with_fpc(proportion, sample_size, population_size, z=1.96):
+    if sample_size == 0 or population_size <= 1:
+        return 0.0
+    fpc = math.sqrt((population_size - sample_size) / (population_size - 1))
+    return z * math.sqrt(proportion * (1.0 - proportion) / sample_size) * fpc
 
-# Calculate Expected Agreement (Pe)
-p_e = 0.0
-for cat in categories:
-    h_count = human_votes.count(cat)
-    j_count = judge_votes.count(cat)
-    p_e += (h_count / total) * (j_count / total)
 
-# Kappa Calculation
-if p_e == 1.0:
-    kappa = 1.0 if p_o == 1.0 else 0.0
-else:
-    kappa = (p_o - p_e) / (1.0 - p_e)
+def load_votes(path):
+    human_votes = []
+    judge_votes = []
+    rows = []
 
-if kappa < 0:
-    interpretation = "Poor Reliability (Worse than chance)"
-elif kappa <= 0.20:
-    interpretation = "Slight Agreement"
-elif kappa <= 0.40:
-    interpretation = "Fair Agreement"
-elif kappa <= 0.60:   
-    interpretation = "Moderate Agreement"
-elif kappa <= 0.80:
-    interpretation = "Substantial Agreement"
-else:
-    interpretation = "Almost Perfect Agreement"
+    with open(path, "r", encoding="utf-8", newline="") as src:
+        reader = csv.reader(src)
+        header = None
+        for row in reader:
+            if not row:
+                continue
+            if "human_verdict" in row and "judge_verdict" in row:
+                header = row
+                break
 
-print("=" * 40)
-print(f" INTER-RATER RELIABILITY RESULTS ({total} Rows Audited)")
-print("=" * 40) 
-print(f"Observed Agreement (Po): {p_o:.4f}")
-print(f"Expected Agreement  (Pe): {p_e:.4f}")
-print(f"Cohen's Kappa     (κ): {kappa:.4f}")
-print("-" * 40)
-print(f"Interpretation: {interpretation}")
-print("=" * 40)
+        if header is None:
+            raise ValueError("Could not find header row with human_verdict and judge_verdict.")
 
-output_path = 'analysis/human_llm_check/audit_results.txt'
-with open(output_path, 'w', encoding='utf-8') as out:
-    out.write("=" * 40 + "\n")
-    out.write(f" INTER-RATER RELIABILITY RESULTS ({total} Rows Audited)\n")
-    out.write("=" * 40 + "\n") 
-    out.write(f"Observed Agreement (Po): {p_o:.4f}\n")
-    out.write(f"Expected Agreement  (Pe): {p_e:.4f}\n")
-    out.write(f"Cohen's Kappa     (κ): {kappa:.4f}\n")
-    out.write("-" * 40 + "\n")
-    out.write(f"Interpretation: {interpretation}\n")
-    out.write("=" * 40 + "\n")
+        h_idx = header.index("human_verdict")
+        j_idx = header.index("judge_verdict")
+        for row in reader:
+            if len(row) <= max(h_idx, j_idx):
+                continue
+            h = row[h_idx].strip().lower()
+            j = row[j_idx].strip().lower()
+            if h in VALID_LABELS and j in VALID_LABELS:
+                human_votes.append(h)
+                judge_votes.append(j)
+                rows.append(dict(zip(header, row)))
+
+    return human_votes, judge_votes, rows
+
+
+def compute_kappa(human_votes, judge_votes):
+    total = len(human_votes)
+    matches = sum(h == j for h, j in zip(human_votes, judge_votes))
+    observed_agreement = matches / total
+
+    expected_agreement = 0.0
+    categories = sorted(set(human_votes + judge_votes))
+    for category in categories:
+        expected_agreement += (
+            human_votes.count(category) / total
+        ) * (
+            judge_votes.count(category) / total
+        )
+
+    if expected_agreement == 1.0:
+        kappa = 1.0 if observed_agreement == 1.0 else 0.0
+    else:
+        kappa = (observed_agreement - expected_agreement) / (1.0 - expected_agreement)
+
+    return matches, observed_agreement, expected_agreement, kappa
+
+
+def main():
+    human_votes, judge_votes, rows = load_votes(CSV_PATH)
+    total = len(human_votes)
+    if total == 0:
+        raise SystemExit("No rows found with both human and judge labels.")
+
+    matches, observed, expected, kappa = compute_kappa(human_votes, judge_votes)
+    low, high = wilson_interval(matches, total)
+    conservative_moe = normal_moe_with_fpc(0.5, total, POPULATION_SIZE)
+    observed_moe = normal_moe_with_fpc(observed, total, POPULATION_SIZE)
+
+    mismatches = [
+        row
+        for row, h, j in zip(rows, human_votes, judge_votes)
+        if h != j
+    ]
+
+    lines = [
+        "Human--LLM Judge Agreement Audit",
+        "=" * 40,
+        f"Rows audited: {total}",
+        f"Sample frame: {POPULATION_SIZE} judged generations (7 models x 2,250 generations)",
+        "Sampling method: simple random sample over saved judged generations",
+        "Original random seed: not recorded for the completed audit sample",
+        "Frozen sample artifact: analysis/human_llm_check/raw_200_sample.jsonl",
+        "",
+        f"Observed agreement: {observed:.4f} ({matches}/{total})",
+        f"Wilson 95% CI for agreement: [{low:.4f}, {high:.4f}]",
+        f"Normal-approximation MOE at p=0.5 with finite-population correction: ±{conservative_moe:.4f}",
+        f"Normal-approximation MOE at observed agreement with finite-population correction: ±{observed_moe:.4f}",
+        f"Expected agreement by chance: {expected:.4f}",
+        f"Cohen's kappa: {kappa:.4f}",
+        "",
+        f"Human label counts: {dict(Counter(human_votes))}",
+        f"LLM judge label counts: {dict(Counter(judge_votes))}",
+        f"Disagreements: {len(mismatches)}",
+    ]
+
+    if mismatches:
+        lines.append("")
+        lines.append("Disagreement rows:")
+        for row in mismatches:
+            lines.append(
+                "- "
+                f"{row.get('question_id')} | {row.get('dataset')} | "
+                f"{row.get('model_name')} | judge={row.get('judge_verdict')} | "
+                f"human={row.get('human_verdict')}"
+            )
+
+    text = "\n".join(lines) + "\n"
+    print(text)
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as out:
+        out.write(text)
+
+
+if __name__ == "__main__":
+    main()
