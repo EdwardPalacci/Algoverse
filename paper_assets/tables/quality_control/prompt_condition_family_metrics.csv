@@ -1,0 +1,7 @@
+family,prompt_condition,N,accuracy,mean_confidence,expected_calibration_error,area_under_risk_coverage,high_confidence_wrong_rate
+AR,cautious,2250,0.718667,0.895267,0.209844,0.198847,0.210667
+AR,neutral,2250,0.718222,0.912111,0.223978,0.204492,0.229778
+AR,overconfident,2250,0.714667,0.946222,0.245600,0.224951,0.236889
+DLM,cautious,3000,0.480000,0.868096,0.422585,0.409160,0.372667
+DLM,neutral,3000,0.476667,0.925128,0.461936,0.409053,0.435334
+DLM,overconfident,3000,0.488334,0.974392,0.482661,0.398595,0.461666

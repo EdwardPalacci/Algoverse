@@ -73,6 +73,8 @@ paper_assets/tables/quality_control/answer_explanation_disagreement_candidates.c
 paper_assets/tables/quality_control/data_alignment_exclusions.csv,artifact,Generated evaluation artifact,Results,true,true
 paper_assets/tables/quality_control/data_alignment_report.csv,artifact,Generated evaluation artifact,Results,true,true
 paper_assets/tables/quality_control/manual_grading_audit.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/quality_control/prompt_condition_family_metrics.csv,artifact,Family-level prompt condition accuracy and calibration summary,Results,true,true
+paper_assets/tables/quality_control/mismatch_by_prompt_summary.csv,artifact,Answer-explanation mismatch candidate summary by prompt condition,Results,true,true
 paper_assets/figures/pngs/figure_10_reliability_diagram_with_ci.png,artifact,Generated evaluation artifact,Results,true,true
 paper_assets/figures/pngs/figure_1_evaluation_flowchart.png,artifact,Generated evaluation artifact,Results,true,true
 paper_assets/figures/pngs/figure_2_confidence_histogram.png,artifact,Generated evaluation artifact,Results,true,true
@@ -112,3 +114,4 @@ analysis/human_llm_check/calculate_kappa.py,code,Human-vs-LLM judge agreement ca
 analysis/human_llm_check/generate_audit.py,code,Deterministic human-audit sample generation script,Artifact,true,true
 documentation/research_notes/human_llm_agreement_audit.md,documentation,Human-vs-LLM judge agreement audit notes,Results,true,true
 documentation/research_notes/evidence_to_claims.md,documentation,Figure/table evidence-to-claims map for paper analysis,Results,true,true
+documentation/research_notes/analysis_to_conclusions.md,documentation,Working analysis-to-conclusion claims for team review,Results,true,true

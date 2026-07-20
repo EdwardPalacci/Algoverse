@@ -1,0 +1,4 @@
+condition,candidate_count,total_dlm_generations,candidate_rate,share_of_candidates
+cautious,108,3000,0.036000,0.314869
+neutral,109,3000,0.036333,0.317784
+overconfident,126,3000,0.042000,0.367347
