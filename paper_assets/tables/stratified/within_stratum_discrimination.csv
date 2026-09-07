@@ -1,0 +1,10 @@
+model_id,model_family,cells,mean_within_stratum_auroc,min_within_stratum_auroc,max_within_stratum_auroc
+Dream-org/Dream-v0-Instruct-7B,DLM,8,0.490686,0.107595,0.609756
+GSAI-ML/LLaDA-8B-Instruct,DLM,7,0.465773,0.274457,0.597826
+google/diffusiongemma-26B-A4B-it,DLM,9,0.595896,0.439761,0.786488
+google/gemini-2.5-flash,AR,7,0.503685,0.356589,0.620104
+inception/mercury-2,DLM,7,0.772376,0.499191,0.915986
+openai/gpt-4.1-mini,AR,8,0.413417,0.303478,0.608879
+x-ai/grok-4.3,AR,8,0.816191,0.650107,0.994102
+ALL AR,AR,23,0.580985,0.303478,0.994102
+ALL DLM,DLM,31,0.579213,0.107595,0.915986

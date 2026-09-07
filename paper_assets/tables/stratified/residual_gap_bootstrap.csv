@@ -1,0 +1,2 @@
+point_estimate,bootstrap_median,ci_low,ci_high,share_positive,iterations
+-0.030893,0.017045,-0.030562,0.079383,0.774436,399

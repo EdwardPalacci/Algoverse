@@ -1,0 +1,8 @@
+model_dropped,family_dropped,mean_ece_gap,sign
+Dream-org/Dream-v0-Instruct-7B,DLM,0.088779,positive
+GSAI-ML/LLaDA-8B-Instruct,DLM,0.020218,positive
+google/diffusiongemma-26B-A4B-it,DLM,0.030894,positive
+google/gemini-2.5-flash,AR,0.032143,positive
+inception/mercury-2,DLM,0.064145,positive
+openai/gpt-4.1-mini,AR,0.081853,positive
+x-ai/grok-4.3,AR,-0.025855,negative
