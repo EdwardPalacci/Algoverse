@@ -1,14 +1,14 @@
 """Per-model error rate by stated confidence, neutral prompt.
 
-Suggested as a baseline figure: does a model's error rate fall as its stated
-confidence rises? Pooled by family the relationship is close to flat, which is
-what the reliability diagrams already show. Split by model it is clear for two
-models and weak for the rest, because most models report confidence of at
-least 0.9 on nearly every answer and leave little range for error to vary over.
+Does a model's error rate fall as its stated confidence rises? Pooled by family
+the relationship is close to flat, which is what the reliability diagrams
+already show. Split by model it is clear for two models and weak for the rest,
+because most models report confidence of at least 0.9 on nearly every answer
+and leave little range for error to vary over.
 
-Neutral prompt only, matching Figure 10 and the paper's baseline condition.
-This renders only figure 11. It deliberately does not call
-render_figures.produce_figures, which regenerates every figure.
+Neutral prompt only, matching the appendix reliability diagram. Renders only
+this figure; run it after generate_paper_assets.py, whose first step clears the
+figure directories.
 """
 
 from __future__ import annotations
@@ -34,11 +34,12 @@ from render_figures import (
 NAME = "figure_11_error_rate_by_confidence_per_model"
 BINS = 10
 SPARSE = 20
+# Display names match Table 1 of the paper.
 MODELS = {
     "AR": [
-        ("x-ai/grok-4.3", "Grok 4.3"),
+        ("x-ai/grok-4.3", "Grok"),
         ("openai/gpt-4.1-mini", "GPT-4.1 mini"),
-        ("google/gemini-2.5-flash", "Gemini 2.5 Flash"),
+        ("google/gemini-2.5-flash", "Gemini Flash"),
     ],
     "DLM": [
         ("inception/mercury-2", "Mercury-2"),
@@ -51,14 +52,13 @@ FAMILY_COLOR = {"AR": COLORS["Autoregressive (AR)"], "DLM": COLORS["Diffusion la
 
 CAPTION = (
     "Figure 11. Error rate by stated confidence for each model under the neutral prompt. "
-    "Answers are grouped into 10 equal-width confidence bins; each point is one bin, placed at its "
-    "mean confidence, and hollow markers are bins with fewer than 20 answers. The dashed line is "
-    "perfect calibration, where error equals one minus confidence. rho is the Spearman rank "
+    "Points are 10 equal-width confidence bins placed at their mean confidence; hollow markers are "
+    "bins with fewer than 20 answers, and the dashed line is perfect calibration. rho is the Spearman "
     "correlation between confidence and error over all of a model's neutral-prompt answers, and the "
     "percentage is the share of answers with confidence of at least 0.9. Error falls steadily with "
-    "confidence only for Grok 4.3 and Mercury-2. Gemini 2.5 Flash, GPT-4.1 mini, DiffusionGemma and "
-    "LLaDA place 99% or more of their answers in the top bin, and Dream splits between the top bin "
-    "and confidence at or near zero, so none of those five shows more than a weak relationship.\n"
+    "confidence only for Grok and Mercury-2. Gemini Flash, GPT-4.1 mini, DiffusionGemma and LLaDA put "
+    "99% or more of their answers in the top bin, and Dream splits its answers between the top bin and "
+    "confidence near zero, which leaves little range for error to vary over.\n"
 )
 
 
@@ -123,68 +123,71 @@ def model_summary(rows: list[dict], model_id: str, family: str) -> dict:
 
 
 def draw_panel(fig: CairoFigure, left: int, top: int, name: str, family: str, summary: dict) -> None:
-    width, height = 270, 230
+    width, height = 360, 300
     right, bottom = left + width, top + height
     color = FAMILY_COLOR[family]
 
     for value in (0.0, 0.5, 1.0):
         x, y = scale_point(value, value, left, right, top, bottom)
-        fig.line(left, y, right, y, "#e3e3e3", 0.8)
-        fig.line(x, top, x, bottom, "#e3e3e3", 0.8)
-        fig.text(x, bottom + 20, f"{value:.1f}", 12, "#555555", align="center")
-        fig.text(left - 10, y + 5, f"{value:.1f}", 12, "#555555", align="right")
-    fig.line(left, bottom, right, bottom)
-    fig.line(left, top, left, bottom)
-    fig.line(left, top, right, bottom, "#888888", 1.2, dash=(5, 5))
+        fig.line(left, y, right, y, "#e3e3e3", 1.0)
+        fig.line(x, top, x, bottom, "#e3e3e3", 1.0)
+        fig.text(x, bottom + 40, f"{value:.1f}", 28, "#444444", align="center")
+        fig.text(left - 16, y + 11, f"{value:.1f}", 28, "#444444", align="right")
+    fig.line(left, bottom, right, bottom, "#333333", 2)
+    fig.line(left, top, left, bottom, "#333333", 2)
+    fig.line(left, top, right, bottom, "#888888", 2, dash=(8, 7))
 
-    fig.text(left, top - 34, name, 16, bold=True)
+    fig.text(left, top - 52, name, 36, bold=True)
     rho = "n/a" if summary["rho"] is None else f"{summary['rho']:+.2f}"
-    fig.text(left, top - 12, f"rho = {rho}   {summary['top']:.0%} at conf ≥ 0.9", 12, "#555555")
+    fig.text(left, top - 14, f"\u03c1 = {rho}   {summary['top']:.0%} at \u2265 0.9", 29, "#555555")
 
     rgb = fig._rgb(color)
     for point in summary["points"]:
         x, y = scale_point(point["mean_confidence"], point["error_rate"], left, right, top, bottom)
-        box = (x - 5, y - 5, x + 5, y + 5)
+        box = (x - 9, y - 9, x + 9, y + 9)
         sparse = point["bin_count"] < SPARSE
         if family == "AR":
-            fig.draw.ellipse(box, fill=None if sparse else rgb, outline=rgb, width=2)
+            fig.draw.ellipse(box, fill=None if sparse else rgb, outline=rgb, width=4)
         else:
-            fig.draw.rectangle(box, fill=None if sparse else rgb, outline=rgb, width=2)
+            fig.draw.rectangle(box, fill=None if sparse else rgb, outline=rgb, width=4)
+    fig.text(left + width / 2, bottom + 88, "Mean confidence in bin", 29, "#333333", align="center")
 
 
 def main() -> None:
     rows, _ = G.load_all_rows()
     rows = [row for row in rows if row["prompt_condition"] == "neutral"]
 
-    fig = CairoFigure(FIG_PNG_DIR / f"{NAME}.png", width=1460, height=800)
-    fig.text(60, 46, "Error rate by stated confidence, per model (neutral prompt)", 22, bold=True)
+    fig = CairoFigure(FIG_PNG_DIR / f"{NAME}.png", width=1590, height=1640)
+    fig.text(40, 60, "Error rate by stated confidence, per model (neutral prompt)", 38, bold=True)
 
-    columns = [120, 470, 820, 1170]
-    row_tops = [130, 480]
-    data = []
-    for row_index, family in enumerate(["AR", "DLM"]):
-        summaries = [(name, model_summary(rows, model_id, family)) for model_id, name in MODELS[family]]
+    columns = [150, 650, 1150]
+    row_tops = [190, 700, 1210]
+    panels = []
+    for family in ["AR", "DLM"]:
+        summaries = [(name, model_summary(rows, model_id, family), family) for model_id, name in MODELS[family]]
         summaries.sort(key=lambda item: 1.0 if item[1]["rho"] is None else item[1]["rho"])
-        for col_index, (name, summary) in enumerate(summaries):
-            data.extend(summary["points"])
-            left, top = columns[col_index], row_tops[row_index]
-            draw_panel(fig, left, top, name, family, summary)
-            fig.text(left + 135, top + 272, "Mean confidence in bin", 13, "#333333", align="center")
-        fig.text(62, row_tops[row_index] + 115, "Error rate", 14, "#333333", align="center", rotate=-1.5708)
+        panels.extend(summaries)
+    data = []
+    for index, (name, summary, family) in enumerate(panels):
+        data.extend(summary["points"])
+        r, col = divmod(index, 3)
+        draw_panel(fig, columns[col], row_tops[r], name, family, summary)
+    for top in row_tops:
+        fig.text(56, top + 150, "Error rate", 30, "#333333", align="center", rotate=-1.5708)
 
-    legend_x, legend_y = 1175, 150
+    lx, ly = 680, 1250
     ar_rgb = fig._rgb(FAMILY_COLOR["AR"])
     dlm_rgb = fig._rgb(FAMILY_COLOR["DLM"])
-    fig.draw.ellipse((legend_x - 5, legend_y - 5, legend_x + 5, legend_y + 5), fill=ar_rgb)
-    fig.text(legend_x + 16, legend_y + 7, "Autoregressive (AR)", 14)
-    fig.draw.rectangle((legend_x - 5, legend_y + 25, legend_x + 5, legend_y + 35), fill=dlm_rgb)
-    fig.text(legend_x + 16, legend_y + 37, "Diffusion (DLM)", 14)
-    fig.draw.ellipse((legend_x - 5, legend_y + 55, legend_x + 5, legend_y + 65), outline=(90, 90, 90), width=2)
-    fig.text(legend_x + 16, legend_y + 67, "Hollow: under 20 answers", 13, "#555555")
-    fig.line(legend_x - 8, legend_y + 90, legend_x + 8, legend_y + 90, "#888888", 1.2, dash=(4, 3))
-    fig.text(legend_x + 16, legend_y + 97, "Perfect calibration", 13, "#555555")
-    fig.text(legend_x - 8, legend_y + 135, "rho: Spearman correlation", 12, "#555555")
-    fig.text(legend_x - 8, legend_y + 155, "between confidence and error", 12, "#555555")
+    fig.draw.ellipse((lx - 11, ly - 11, lx + 11, ly + 11), fill=ar_rgb)
+    fig.text(lx + 30, ly + 14, "Autoregressive (AR)", 30)
+    fig.draw.rectangle((lx - 11, ly + 44, lx + 11, ly + 66), fill=dlm_rgb)
+    fig.text(lx + 30, ly + 70, "Diffusion (DLM)", 30)
+    fig.draw.ellipse((lx - 11, ly + 100, lx + 11, ly + 122), outline=(90, 90, 90), width=4)
+    fig.text(lx + 30, ly + 126, "Hollow: bins with under 20 answers", 29, "#555555")
+    fig.line(lx - 14, ly + 168, lx + 14, ly + 168, "#888888", 2, dash=(7, 5))
+    fig.text(lx + 30, ly + 182, "Perfect calibration", 29, "#555555")
+    fig.text(lx - 14, ly + 250, "\u03c1: Spearman correlation between confidence", 29, "#555555")
+    fig.text(lx - 14, ly + 292, "and error; % = share of answers at \u2265 0.9", 29, "#555555")
     fig.write()
 
     fields = [

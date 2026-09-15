@@ -1,0 +1,321 @@
+family,model_label,dataset,condition,question_id,sample_id,answer_type,answer,confidence,correctness_label,disagreement_flag,short_explanation
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0005,0,numeric,56.0,1.0,INCORRECT,numeric answer 56 differs from final explanation number 8,Kylar pays full price for 8 glasses and a discounted price for the other 8 glasses.
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0066,1,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 2,"There are 4 schools, each with 2 teams (girls' and boys'), 5 players per team, and 2 coaches per school."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0066,0,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 2,"There are 4 schools, each with 2 teams (girls' and boys'), 5 players per team, and 2 coaches per school."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0097,1,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 3,"Freda used 12 tomatoes to make 32 ounces of sauce, as each can provides 8 ounces of sauce and contains 3 tomatoes."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0097,2,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 3,"Freda used 12 tomatoes to make 32 ounces of sauce, as each can provides 8 ounces of sauce and contains 3 tomatoes."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0097,0,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 3,"Freda used 12 tomatoes to make 32 ounces of sauce, as each can provides 8 ounces of sauce and contains 3 tomatoes."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0132,0,numeric,48,1.0,INCORRECT,numeric answer 48 differs from final explanation number 6,"Pam and Fred each rode 4 times, for a total of 8 rides, and each ride cost 6 tickets."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0132,1,numeric,48,1.0,INCORRECT,numeric answer 48 differs from final explanation number 6,"Pam and Fred each rode 4 times, for a total of 8 rides, and each ride cost 6 tickets."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0132,2,numeric,48,1.0,INCORRECT,numeric answer 48 differs from final explanation number 6,"Pam and Fred each rode 4 times, for a total of 8 rides, and each ride cost 6 tickets."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0213,0,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 3,"Calculate customers on day 2, then subtract day 1 and day 2 totals from the overall total to find day 3."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0213,2,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 3,"Calculate customers on day 2, then subtract day 1 and day 2 totals from the overall total to find day 3."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0213,1,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 3,"Calculate customers on day 2, then subtract day 1 and day 2 totals from the overall total to find day 3."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0289,0,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0289,2,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0289,1,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0434,1,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 3.75,"George spent $1.20 on chips and had 5 cents left, leaving $3.75 for candy bars."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0434,0,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 3.75,"George spent $1.20 on chips and had 5 cents left, leaving $3.75 for candy bars."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0434,2,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 3.75,"George spent $1.20 on chips and had 5 cents left, leaving $3.75 for candy bars."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0463,0,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 15,Calculate the tip amount (1/5 of $15) and add it to the original cost to find the total.
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0463,2,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 15,Calculate the tip amount (1/5 of $15) and add it to the original cost to find the total.
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0463,1,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 15,Calculate the tip amount (1/5 of $15) and add it to the original cost to find the total.
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0550,1,numeric,25.15,1.0,INCORRECT,numeric answer 25.15 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final spending amount."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0550,0,numeric,25.15,1.0,INCORRECT,numeric answer 25.15 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final spending amount."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0550,2,numeric,25.15,1.0,INCORRECT,numeric answer 25.15 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final spending amount."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0579,0,numeric,7,1.0,CORRECT,numeric answer 7 differs from final explanation number 2,"The brother has 2 cards (5 - 3), so together they have 7 cards (5 + 2)."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0579,2,numeric,7,1.0,CORRECT,numeric answer 7 differs from final explanation number 2,"The brother has 2 cards (5 - 3), so together they have 7 cards (5 + 2)."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0579,1,numeric,7,1.0,CORRECT,numeric answer 7 differs from final explanation number 2,"The brother has 2 cards (5 - 3), so together they have 7 cards (5 + 2)."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0695,0,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"First, calculate the number of bucks, then find 20% of that number to get the 8-point bucks."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0695,1,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"First, calculate the number of bucks, then find 20% of that number to get the 8-point bucks."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0695,2,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"First, calculate the number of bucks, then find 20% of that number to get the 8-point bucks."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0811,0,numeric,84.0,1.0,INCORRECT,numeric answer 84 differs from final explanation number 5,"Felix made $105 at $0.25 per branch, meaning he climbed 420 branches in total over 5 days."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0811,1,numeric,84.0,1.0,INCORRECT,numeric answer 84 differs from final explanation number 5,"Felix made $105 at $0.25 per branch, meaning he climbed 420 branches in total over 5 days."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_0811,2,numeric,84.0,1.0,INCORRECT,numeric answer 84 differs from final explanation number 5,"Felix made $105 at $0.25 per branch, meaning he climbed 420 branches in total over 5 days."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_1072,0,numeric,80,1.0,INCORRECT,numeric answer 80 differs from final explanation number 85,"Maggie spent $15 and Riza spent $20, leaving them with $45 and $40 respectively, for a total of $85."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_1072,1,numeric,80,1.0,INCORRECT,numeric answer 80 differs from final explanation number 85,"Maggie spent $15 and Riza spent $20, leaving them with $45 and $40 respectively, for a total of $85."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_1072,2,numeric,80,1.0,INCORRECT,numeric answer 80 differs from final explanation number 85,"Maggie spent $15 and Riza spent $20, leaving them with $45 and $40 respectively, for a total of $85."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_1217,2,numeric,102,1.0,INCORRECT,numeric answer 102 differs from final explanation number 3,"Calculate the cost for the first 5 years and the next 3 years, then sum them up."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_1217,1,numeric,108,1.0,INCORRECT,numeric answer 108 differs from final explanation number 3,"Calculate the cost for the first 5 years and the next 3 years, then sum them up."
+AR,Gemini Flash,GSM8K,neutral,GSM8K_1217,0,numeric,102,1.0,INCORRECT,numeric answer 102 differs from final explanation number 3,"Calculate the cost for the first 5 years and the next 3 years, then sum them up."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0057,0,numeric,83,1.0,CORRECT,numeric answer 83 differs from final explanation number 15,"The maximum weight for boxes is 1245 pounds, and each box weighs 15 pounds."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0097,0,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 8,"Freda used 12 tomatoes to make 32 ounces of sauce, as each can yields 8 ounces of sauce."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0132,0,numeric,48,1.0,INCORRECT,numeric answer 48 differs from final explanation number 6,"Pam and Fred each rode 4 times, totaling 8 rides, and each ride cost 6 tickets."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0132,1,numeric,48,1.0,INCORRECT,numeric answer 48 differs from final explanation number 6,"Pam and Fred each rode 4 times, totaling 8 rides, and each ride cost 6 tickets."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0132,2,numeric,48,1.0,INCORRECT,numeric answer 48 differs from final explanation number 6,"Pam and Fred each rode 4 times, totaling 8 rides, and each ride cost 6 tickets."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0213,0,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 3,"Calculate customers on day 1 and day 2, then subtract from the total to find day 3's count."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0213,2,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 3,"Calculate customers on day 1 and day 2, then subtract from the total to find day 3's count."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0213,1,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 3,"Calculate customers on day 1 and day 2, then subtract from the total to find day 3's count."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0231,1,numeric,50,1.0,CORRECT,numeric answer 50 differs from final explanation number 2,"Kylie collected 25 shells on Monday, and 2 times that amount on Tuesday."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0231,2,numeric,50,1.0,CORRECT,numeric answer 50 differs from final explanation number 2,"Kylie collected 25 shells on Monday, and 2 times that amount on Tuesday."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0231,0,numeric,50,1.0,CORRECT,numeric answer 50 differs from final explanation number 2,"Kylie collected 25 shells on Monday, and 2 times that amount on Tuesday."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0289,1,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0289,0,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0289,2,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0347,0,numeric,36.0,1.0,CORRECT,numeric answer 36 differs from final explanation number 40,"Calculate the total original cost, then apply the 40% discount to find the final price."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0347,1,numeric,36.0,1.0,CORRECT,numeric answer 36 differs from final explanation number 40,"Calculate the total original cost, then apply the 40% discount to find the final price."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0347,2,numeric,36.0,1.0,CORRECT,numeric answer 36 differs from final explanation number 40,"Calculate the total original cost, then apply the 40% discount to find the final price."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0463,0,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 3,"The tip is 1/5 of $15, which is $3. The total amount is the cost plus the tip."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0463,1,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 3,"The tip is 1/5 of $15, which is $3. The total amount is the cost plus the tip."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0463,2,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 3,"The tip is 1/5 of $15, which is $3. Adding the tip to the cost gives the total amount."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0550,0,numeric,26.78,1.0,INCORRECT,numeric answer 26.78 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final spending amount."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0550,1,numeric,26.78,1.0,INCORRECT,numeric answer 26.78 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final spending amount."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0550,2,numeric,26.78,1.0,INCORRECT,numeric answer 26.78 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final spending amount."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0695,1,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"First, calculate the number of bucks, then find 20% of that number to get the 8-point bucks."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0695,0,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"First, calculate the number of bucks, then find 20% of that number to get the 8-point bucks."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0695,2,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"First, calculate the number of bucks, then find 20% of that number to get the 8-point bucks."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0811,0,numeric,84.0,1.0,INCORRECT,numeric answer 84 differs from final explanation number 5,"Felix earned $105 by charging $0.25 per branch, meaning he climbed 420 branches in total over 5 days."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0811,1,numeric,84.0,1.0,INCORRECT,numeric answer 84 differs from final explanation number 5,"Felix earned $105 by charging $0.25 per branch, meaning he climbed 420 branches in total over 5 days."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0811,2,numeric,84.0,1.0,INCORRECT,numeric answer 84 differs from final explanation number 5,"Felix earned $105 by charging $0.25 per branch, meaning he climbed 420 branches in total over 5 days."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0782,0,numeric,23,1.0,INCORRECT,numeric answer 23 differs from final explanation number 2,"They ride 3 times/day for 5 days (15 rides) and 6 times/day for 2 days (12 rides), totaling 27 rides. The question asks for 'they', implying both, so 27/2 = 13.5. Re-reading, 'they' refers to Chase and Rider together, so 27 is the total. Wait, the question is 'How many times do they ride their bikes a week?'. It's not asking for each person. So 27 is the total. Let me re-read the question carefully. 'Chase and Rider can ride their bikes thrice a day for 5 days; but on two other days, they ride twice the times they do on usual days. How many times do they ride their bikes a week?'
+Usual days: 3 rides/day * 5 days = 15 rides.
+Other days: 2 days * (3 rides/day * 2) = 2 days * 6 rides/day = 12 rides.
+Total rides in a week = 15 + 12 = 27 rides.
+The question is about 'they', meaning Chase and Rider combined. So 27 is the total number of rides for both of them.
+Let me re-evaluate the problem.
+""Chase and Rider can ride their bikes thrice a day for 5 days"" -> This means each of them rides 3 times a day. So for 5 days, each rides 3*5 = 15 times.
+""but on two other days, they ride twice the times they do on usual days."" -> On these 2 days, each rides 3*2 = 6 times a day. So for 2 days, each rides 6*2 = 12 times.
+Total rides for one person in a week = 15 + 12 = 27 times.
+The question asks ""How many times do they ride their bikes a week?"". This implies the total number of riding instances for both of them combined.
+If Chase rides 27 times and Rider rides 27 times, then together they ride 27 + 27 = 54 times.
+However, the phrasing ""they ride their bikes thrice a day"" usually implies a shared activity or a collective count.
+Let's consider the phrasing ""How many times do they ride their bikes a week?"".
+If Chase rides 3 times a day and Rider rides 3 times a day, then ""they ride their bikes thrice a day"" could mean 3 instances of riding for Chase and 3 instances for Rider.
+If the question meant the total number of individual rides, it would be 54.
+But if ""they ride their bikes thrice a day"" means 3 riding sessions that both participate in, then it's 3 sessions.
+
+Let's assume ""they ride their bikes thrice a day"" means 3 riding sessions in total for the pair.
+For 5 days: 3 rides/day * 5 days = 15 rides.
+For 2 days: (3 * 2) rides/day * 2"
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0782,1,numeric,23,1.0,INCORRECT,numeric answer 23 differs from final explanation number 2,"They ride 3 times/day for 5 days (15 rides) and 6 times/day for 2 days (12 rides), totaling 27 rides. The question asks for 'they', implying both, so 27/2 = 13.5. Re-reading, 'they' refers to Chase and Rider together, so 27 is the total. Wait, the question is 'How many times do they ride their bikes a week?'. It's not asking for each person. So 27 is the total. Let me re-read the question carefully. 'Chase and Rider can ride their bikes thrice a day for 5 days; but on two other days, they ride twice the times they do on usual days. How many times do they ride their bikes a week?'
+Usual days: 3 rides/day * 5 days = 15 rides.
+Other days: 2 days * (3 rides/day * 2) = 2 days * 6 rides/day = 12 rides.
+Total rides in a week = 15 + 12 = 27 rides.
+The question is about 'they', meaning Chase and Rider combined. So 27 is the total number of rides for both of them.
+Let me re-evaluate the problem.
+""Chase and Rider can ride their bikes thrice a day for 5 days"" -> This means each of them rides 3 times a day. So for 5 days, each rides 3*5 = 15 times.
+""but on two other days, they ride twice the times they do on usual days."" -> On these 2 days, each rides 3*2 = 6 times a day. So for 2 days, each rides 6*2 = 12 times.
+Total rides for one person in a week = 15 + 12 = 27 times.
+The question asks ""How many times do they ride their bikes a week?"". This implies the total number of riding instances for both of them combined.
+If Chase rides 27 times and Rider rides 27 times, then together they ride 27 + 27 = 54 times.
+However, the phrasing ""they ride their bikes thrice a day"" usually implies a shared activity or a collective count.
+Let's consider the phrasing ""How many times do they ride their bikes a week?"".
+If Chase rides 3 times a day and Rider rides 3 times a day, then ""they ride their bikes thrice a day"" could mean 3 instances of riding for Chase and 3 instances for Rider.
+If the question meant the total number of individual rides, it would be 54.
+But if ""they ride their bikes thrice a day"" means 3 riding sessions that both participate in, then it's 3 sessions.
+
+Let's assume ""they ride their bikes thrice a day"" means 3 riding sessions in total for the pair.
+For 5 days: 3 rides/day * 5 days = 15 rides.
+For 2 days: (3 * 2) rides/day * 2"
+AR,Gemini Flash,GSM8K,cautious,GSM8K_0782,2,numeric,23,1.0,INCORRECT,numeric answer 23 differs from final explanation number 2,"They ride 3 times/day for 5 days (15 rides) and 6 times/day for 2 days (12 rides), totaling 27 rides. The question asks for 'they', implying both, so 27/2 = 13.5. Re-reading, 'they' refers to Chase and Rider together, so 27 is the total. Wait, the question is 'How many times do they ride their bikes a week?'. It's not asking for each person. So 27 is the total. Let me re-read the question carefully. 'Chase and Rider can ride their bikes thrice a day for 5 days; but on two other days, they ride twice the times they do on usual days. How many times do they ride their bikes a week?'
+Usual days: 3 rides/day * 5 days = 15 rides.
+Other days: 2 days * (3 rides/day * 2) = 2 days * 6 rides/day = 12 rides.
+Total rides in a week = 15 + 12 = 27 rides.
+The question is about 'they', meaning Chase and Rider combined. So 27 is the total number of rides for both of them.
+Let me re-evaluate the problem.
+""Chase and Rider can ride their bikes thrice a day for 5 days"" -> This means each of them rides 3 times a day. So for 5 days, each rides 3*5 = 15 times.
+""but on two other days, they ride twice the times they do on usual days."" -> On these 2 days, each rides 3*2 = 6 times a day. So for 2 days, each rides 6*2 = 12 times.
+Total rides for one person in a week = 15 + 12 = 27 times.
+The question asks ""How many times do they ride their bikes a week?"". This implies the total number of riding instances for both of them combined.
+If Chase rides 27 times and Rider rides 27 times, then together they ride 27 + 27 = 54 times.
+However, the phrasing ""they ride their bikes thrice a day"" usually implies a shared activity or a collective count.
+Let's consider the phrasing ""How many times do they ride their bikes a week?"".
+If Chase rides 3 times a day and Rider rides 3 times a day, then ""they ride their bikes thrice a day"" could mean 3 instances of riding for Chase and 3 instances for Rider.
+If the question meant the total number of individual rides, it would be 54.
+But if ""they ride their bikes thrice a day"" means 3 riding sessions that both participate in, then it's 3 sessions.
+
+Let's assume ""they ride their bikes thrice a day"" means 3 riding sessions in total for the pair.
+For 5 days: 3 rides/day * 5 days = 15 rides.
+For 2 days: (3 * 2) rides/day * 2"
+AR,Gemini Flash,GSM8K,cautious,GSM8K_1217,0,numeric,75,1.0,CORRECT,numeric answer 75 differs from final explanation number 3,"Calculate the cost for the first 5 years and the next 3 years, then sum them up."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_1217,2,numeric,75,1.0,CORRECT,numeric answer 75 differs from final explanation number 3,"Calculate the cost for the first 5 years and the next 3 years, then sum them up."
+AR,Gemini Flash,GSM8K,cautious,GSM8K_1217,1,numeric,75,1.0,CORRECT,numeric answer 75 differs from final explanation number 3,"Calculate the cost for the first 5 years and the next 3 years, then sum them up."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0005,0,numeric,56.0,1.0,INCORRECT,numeric answer 56 differs from final explanation number 8,Kylar pays full price for 8 glasses and discounted price for 8 glasses.
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0005,1,numeric,56.0,1.0,INCORRECT,numeric answer 56 differs from final explanation number 8,Kylar pays full price for 8 glasses and discounted price for 8 glasses.
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0005,2,numeric,56.0,1.0,INCORRECT,numeric answer 56 differs from final explanation number 8,Kylar pays full price for 8 glasses and discounted price for 8 glasses.
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0066,0,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 14,"Each school sends 2 teams (girls and boys) with 5 players each, plus 2 coaches, totaling 14 people per school."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0066,2,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 2,Each school sends 2 teams (girls and boys) with
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0066,1,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 14,"Each school sends 2 teams (girls and boys) with 5 players each, plus 2 coaches, totaling 14 people per school."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0097,1,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 32,"Freda used 12 tomatoes to make 32 ounces of sauce, considering the volume reduction."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0097,2,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 32,"Freda used 12 tomatoes to make 32 ounces of sauce, considering the volume reduction."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0132,0,numeric,60,1.0,CORRECT,numeric answer 60 differs from final explanation number 6,"Pam and Fred each rode 5 rides, totaling 10 rides, which cost 6 tickets each."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0132,1,numeric,60,1.0,CORRECT,numeric answer 60 differs from final explanation number 6,"Pam and Fred each rode 5 rides, totaling 10 rides, which cost 6 tickets each."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0132,2,numeric,60,1.0,CORRECT,numeric answer 60 differs from final explanation number 6,"Pam and Fred each rode 5 rides, totaling 10 rides, which cost 6 tickets each."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0213,0,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 2,"Calculated customers on day 2, then subtracted day 1 and day 2 totals from the overall total."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0213,1,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 2,"Calculated customers on day 2, then subtracted day 1 and day 2 totals from the overall total."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0213,2,numeric,250,1.0,CORRECT,numeric answer 250 differs from final explanation number 2,"Calculated customers on day 2, then subtracted day 1 and day 2 totals from the overall total."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0289,0,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0289,2,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0289,1,numeric,16.0,1.0,CORRECT,numeric answer 16 differs from final explanation number 480,"The slow car travels at 30 mph, so it takes 16 hours to cover 480 miles."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0463,0,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 3,"The tip is 1/5 of $15, which is $3. The total amount is the cost plus the tip."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0463,2,numeric,18.0,1.0,CORRECT,numeric answer 18 differs from final explanation number 3,"The tip is 1/5 of $15, which is $3. The total amount is the cost plus the tip."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0550,1,numeric,23.18,1.0,INCORRECT,numeric answer 23.18 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final price."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0550,2,numeric,23.18,1.0,INCORRECT,numeric answer 23.18 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final price."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0550,0,numeric,23.18,1.0,INCORRECT,numeric answer 23.18 differs from final explanation number 10,"Calculate the total cost of items, then apply the 10% discount to find the final price."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0695,0,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"Calculate 50% of 50 deer to find bucks, then 20% of that number for 8-point bucks."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0695,1,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"Calculate 50% of 50 deer to find bucks, then 20% of that number for 8-point bucks."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0695,2,numeric,5,1.0,CORRECT,numeric answer 5 differs from final explanation number 8,"Calculate 50% of 50 deer to find bucks, then 20% of that number for 8-point bucks."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0753,0,numeric,180,1.0,INCORRECT,numeric answer 180 differs from final explanation number 42,"Jeff started with 96 glasses and 48 plates, and after breakages, he has 86 glasses and 42 plates remaining."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0753,1,numeric,180,1.0,INCORRECT,numeric answer 180 differs from final explanation number 42,"Jeff started with 96 glasses and 48 plates, and after breakages, he has 86 glasses and 42 plates remaining."
+AR,Gemini Flash,GSM8K,overconfident,GSM8K_0753,2,numeric,180,1.0,INCORRECT,numeric answer 180 differs from final explanation number 42,"Jeff started with 96 glasses and 48 plates, and after breakages, he has 86 glasses and 42 plates remaining."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0005,2,numeric,70.0,1.0,INCORRECT,numeric answer 70 differs from final explanation number 60,The total cost is calculated by summing full price for odd glasses and 60% price for even glasses.
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0005,0,numeric,70.0,1.0,INCORRECT,numeric answer 70 differs from final explanation number 60,The total cost is calculated by summing full price for odd glasses and 60% price for even glasses.
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0012,0,numeric,15,1.0,INCORRECT,numeric answer 15 differs from final explanation number 7.5,It takes 15 years for total profit to exceed the initial $90 cost considering yearly net earnings of $7.5.
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0018,0,numeric,9,1.0,INCORRECT,numeric answer 9 differs from final explanation number 7,"Claire eats 3 eggs daily for 28 days, totaling 84 eggs, which equals 7 dozens."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0018,2,numeric,1,0.95,INCORRECT,numeric answer 1 differs from final explanation number 7,"Claire eats 3 eggs daily for 28 days, totaling 84 eggs, which equals 7 dozens."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0025,1,numeric,2,1.0,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Calculated total cost of known items, subtracted from $50, then divided by $8.50 per pizza box."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0018,1,numeric,1,1.0,INCORRECT,numeric answer 1 differs from final explanation number 7,"Claire uses 3 eggs daily, so in 4 weeks (28 days) she uses 84 eggs, which is 7 dozens."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0041,1,numeric,1200,1.0,INCORRECT,numeric answer 1200 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, which is 200 feet beyond the dragon's 1000 feet reach."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0041,0,numeric,1200,1.0,INCORRECT,numeric answer 1200 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, which is 200 feet beyond the dragon's 1000 feet flame reach."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0041,2,numeric,1200,1.0,INCORRECT,numeric answer 1200 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, which is 200 feet beyond the dragon's 1000 feet flame reach."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0088,0,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times more, totaling 88,000 copies combined."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0088,2,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8000 copies because Marilyn sold 10 times that, totaling 88000 copies."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0097,2,numeric,12,1.0,CORRECT,numeric answer 12 differs from final explanation number 18,"Freda used 6 cans (32 ounces sauce = 64 ounces tomatoes, 16 ounces per can, 6 cans × 3 tomatoes each = 18 tomatoes)."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0132,1,numeric,36,1.0,INCORRECT,numeric answer 36 differs from final explanation number 60,"Total rides are 10, each costing 6 tickets, so 10*6=60 tickets used."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0132,2,numeric,36,1.0,INCORRECT,numeric answer 36 differs from final explanation number 60,"Total rides are 10, each costing 6 tickets, so 10*6=60 tickets used."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0088,1,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0579,0,numeric,10,1.0,INCORRECT,numeric answer 10 differs from final explanation number 7,"The boy has 5 cards, his brother has 2 cards, together they have 7 cards."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0579,1,numeric,10,1.0,INCORRECT,numeric answer 10 differs from final explanation number 7,"The boy has 5 cards, his brother has 2 cards, together they have 7 cards."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0579,2,numeric,10,1.0,INCORRECT,numeric answer 10 differs from final explanation number 7,"The boy has 5 cards, his brother has 2 cards, together they have 7 cards."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0608,1,numeric,7.5,1.0,INCORRECT,numeric answer 7.5 differs from final explanation number 50,"Total cost after 30% discount is $42.5, so Joe has $7.5 left from $50."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0608,0,numeric,18,1.0,INCORRECT,numeric answer 18 differs from final explanation number 50,"Total cost after 30% discount is $32, so Joe has $18 left from $50."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0811,1,numeric,105,0.95,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 105 / 0.25 = 420 branches in total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0869,0,numeric,3500,1.0,INCORRECT,numeric answer 3500 differs from final explanation number 500,Total cost is 5 phones × $700 = $3500; change from $4000 is $4000 - $3500 = $500.
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0898,1,numeric,60,1.0,INCORRECT,numeric answer 60 differs from final explanation number 110,"Anis rowed 1/5 more than Dijana's 50 miles, so 50 + 10 = 60; total is 50 + 60 = 110 miles."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0898,0,numeric,60,1.0,INCORRECT,numeric answer 60 differs from final explanation number 110,"Anis rowed 1/5 more than Dijana's 50 miles, so 50 + 10 = 60; total is 50 + 60 = 110 miles."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0898,2,numeric,60,1.0,INCORRECT,numeric answer 60 differs from final explanation number 110,"Anis rowed 1/5 more than Dijana's 50 miles, so 50 + 10 = 60; total is 50 + 60 = 110 miles."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0956,0,numeric,2,1.0,INCORRECT,numeric answer 2 differs from final explanation number 1,"Two-thirds of 9 non-work emails are to family, leaving 3 emails, one-third of which (1) are to boyfriend."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0956,1,numeric,2,1.0,INCORRECT,numeric answer 2 differs from final explanation number 1,"Two-thirds of 9 non-work emails are 6 to family, leaving 3 to others; one-third of 3 is 1 to boyfriend."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0956,2,numeric,2,1.0,INCORRECT,numeric answer 2 differs from final explanation number 1,"Two-thirds of 9 non-work emails are to family, leaving 3 emails, one-third of which (1) are to boyfriend."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_1014,1,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, enough to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_0637,2,numeric,17,1.0,CORRECT,numeric answer 17 differs from final explanation number 3,"Lynn ran 17 miles, calculated from Reggie's distance being 5 times Paisley's and 3 miles more than Lynn's."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_1014,0,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, allowing him to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_1217,0,numeric,51,1.0,INCORRECT,numeric answer 51 differs from final explanation number 3,Pauline spent $30 in the first 5 years and $21 in the next 3 years after the price increase.
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_1217,2,numeric,51,1.0,INCORRECT,numeric answer 51 differs from final explanation number 3,Pauline spent $30 in the first 5 years and $21 in the next 3 years after the price increase.
+AR,GPT-4.1 mini,GSM8K,neutral,GSM8K_1014,2,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, allowing him to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0005,0,numeric,70,1.0,INCORRECT,numeric answer 70 differs from final explanation number 16,"The total cost is calculated by pairing glasses: full price $5 and discounted $3, repeated 8 times for 16 glasses."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0005,2,numeric,70.0,1.0,INCORRECT,numeric answer 70 differs from final explanation number 16,"The total cost is calculated by pairing glasses at full and discounted prices, summing to $70 for 16 glasses."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0012,0,numeric,15,0.95,INCORRECT,numeric answer 15 differs from final explanation number 7.5,It takes 15 years for total profit to exceed initial and annual costs based on yearly net earnings of $7.5.
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0018,0,numeric,9,1.0,INCORRECT,numeric answer 9 differs from final explanation number 7,"Claire uses 3 eggs daily, 7 days a week for 4 weeks, totaling 84 eggs or 7 dozens."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0018,1,numeric,9,1.0,INCORRECT,numeric answer 9 differs from final explanation number 7,"Claire eats 3 eggs daily for 28 days, totaling 84 eggs, which equals 7 dozens."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0025,0,numeric,2,0.95,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Calculated total cost of known items, subtracted from $50, then divided remainder by $8.50 to find number of pizza boxes."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0025,2,numeric,2,1.0,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Calculated total cost of known items, subtracted from $50, then divided remainder by $8.50 to find number of pizza boxes."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0025,1,numeric,2,0.95,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Calculated total cost of known items, subtracted from $50, then divided remainder by $8.50 to find number of pizza boxes."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0041,1,numeric,2000,0.95,INCORRECT,numeric answer 2000 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, which is 2000 feet beyond the dragon's 1000-foot flame range."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0041,2,numeric,2000,1.0,INCORRECT,numeric answer 2000 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, which is 2000 feet beyond the dragon's 1000-foot flame reach."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0041,0,numeric,2000,0.95,INCORRECT,numeric answer 2000 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, 200 feet beyond the dragon's 1000-foot flame range."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0074,1,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 88,"Rounded prices are $3, $2, and $2; total is 12*3 + 9*2 + 17*2 = 36 + 18 + 34 = 88."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0074,0,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 88,"Rounded prices are $3, $2, and $2; total = 12*3 + 9*2 + 17*2 = 36 + 18 + 34 = 88."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0088,0,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0088,2,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0088,1,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0132,0,numeric,36,1.0,INCORRECT,numeric answer 36 differs from final explanation number 60,"Total rides are 10, each costing 6 tickets, so 10*6=60 tickets used."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0132,2,numeric,36,1.0,INCORRECT,numeric answer 36 differs from final explanation number 60,"Total rides are 2+4+2+2=10, each costing 6 tickets, so 10*6=60 tickets used."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0181,1,numeric,160,0.95,CORRECT,numeric answer 160 differs from final explanation number 40,"White carnations are 40, so red roses are 4 times 40, which is 160; 200 pink calla lilies confirm 5 times 40 white carnations."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0376,2,numeric,10,1.0,INCORRECT,numeric answer 10 differs from final explanation number 15,"Half of 40 is 20, one-fourth of remaining 20 is 5, so 20 - 5 = 15 like yellow."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0434,0,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 75,"George spent 99% of $5, bought 3 chips at 40 cents each, and the remaining money bought 6 candy bars at 75 cents each."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0434,2,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 75,"George spent 99% of $5, bought 3 chips at 40 cents each, and the remaining money bought 6 candy bars at 75 cents each."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0724,0,numeric,14,1.0,INCORRECT,numeric answer 14 differs from final explanation number 5,Calculated leftover slices from 5 pizzas with given fractions eaten by friends.
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0811,0,numeric,105,0.9,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 420 branches total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0811,1,numeric,105,0.9,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 420 branches total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0869,0,numeric,3500,1.0,INCORRECT,numeric answer 3500 differs from final explanation number 500,Total cost is 5 phones × $700 = $3500; change from $4000 is $4000 - $3500 = $500.
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0811,2,numeric,105,0.95,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 420 branches total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0898,0,numeric,60,1.0,INCORRECT,numeric answer 60 differs from final explanation number 110,"Anis rowed 1/5 more than 50 miles, so 50 + 10 = 60; total is 50 + 60 = 110 miles."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0869,2,numeric,3500,1.0,INCORRECT,numeric answer 3500 differs from final explanation number 500,Total cost is 5 phones × $700 = $3500; change from $4000 is $4000 - $3500 = $500.
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0898,1,numeric,60,1.0,INCORRECT,numeric answer 60 differs from final explanation number 110,"Anis rowed 1/5 more than Dijana's 50 miles, so 50 + 10 = 60; total is 50 + 60 = 110 miles."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0898,2,numeric,60,1.0,INCORRECT,numeric answer 60 differs from final explanation number 110,"Anis rowed 1/5 more than Dijana's 50 miles, so 50 + 10 = 60; total is 50 + 60 = 110 miles."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_0956,1,numeric,3,0.95,INCORRECT,numeric answer 3 differs from final explanation number 16,"Calculated boyfriend emails as one-third of remaining non-work, non-family emails from total 16 emails."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_1014,0,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, enough to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_1014,2,numeric,6,0.95,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, allowing him to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,cautious,GSM8K_1014,1,numeric,6,0.95,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, allowing him to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0005,2,numeric,68,1.0,INCORRECT,numeric answer 68 differs from final explanation number 16,"The total cost is calculated by summing full price for odd glasses and 60% price for even glasses, resulting in $68 for 16 glasses."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0018,2,numeric,9,1.0,INCORRECT,numeric answer 9 differs from final explanation number 7,"Claire uses 3 eggs daily for 28 days, totaling 84 eggs, which equals 7 dozens."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0018,1,numeric,9,1.0,INCORRECT,numeric answer 9 differs from final explanation number 7,"Claire uses 3 eggs daily for 28 days, totaling 84 eggs, which equals 7 dozens."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0018,0,numeric,3,1.0,INCORRECT,numeric answer 3 differs from final explanation number 7,"Claire eats 3 eggs daily for 28 days, totaling 84 eggs, which equals 7 dozens."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0025,1,numeric,2,1.0,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Calculated total cost of known items, subtracted from $50, then divided by $8.50 per pizza box."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0041,2,numeric,1200,1.0,INCORRECT,numeric answer 1200 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, 200 feet beyond the dragon's 1000 feet flame reach."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0041,0,numeric,1200,1.0,INCORRECT,numeric answer 1200 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, 200 feet beyond the dragon's 1000 feet flame range."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0041,1,numeric,1200,1.0,INCORRECT,numeric answer 1200 differs from final explanation number 1000,"Polly can throw 1200 feet with the gemstone, 200 feet beyond the dragon's 1000 feet flame reach."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0074,1,numeric,56,1.0,INCORRECT,numeric answer 56 differs from final explanation number 88,"Rounded prices are $3, $2, and $2; total = 12*3 + 9*2 + 17*2 = 36 + 18 + 34 = 88."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0088,0,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0088,2,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0088,1,numeric,8000,1.0,CORRECT,numeric answer 8000 differs from final explanation number 88000,"Harald sold 8,000 copies because Marilyn sold 10 times that, totaling 88,000 copies."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0434,1,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 75,"George spent 3 chips at 40 cents each and had 1% of $5 left, so he bought 6 candy bars at 75 cents each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0434,0,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 75,"George spent 3 chips at 40 cents each and had 1% of $5 left, so he bought 6 candy bars at 75 cents each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0434,2,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 75,"George spent 3 chips at 40 cents each and had 1% of $5 left, so he spent $4.95 on chips and candy bars, buying 6 candy bars at 75 cents each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0608,1,numeric,17.5,1.0,INCORRECT,numeric answer 17.5 differs from final explanation number 50,"Total cost after 30% discount is $32.5, so Joe has $17.5 left from $50."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0608,0,numeric,17.5,1.0,INCORRECT,numeric answer 17.5 differs from final explanation number 50,"Total cost after 30% discount is $32.5, so Joe has $17.5 left from $50."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0608,2,numeric,17.5,1.0,INCORRECT,numeric answer 17.5 differs from final explanation number 50,"Total cost after 30% discount is $32.5, so Joe has $17.5 left from $50."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0811,0,numeric,105,1.0,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 420 branches total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0811,1,numeric,105,1.0,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 420 branches total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0811,2,numeric,105,1.0,INCORRECT,numeric answer 105 differs from final explanation number 60,"Felix made $105 at $0.25 per branch, so he climbed 420 branches total; dividing by 7 days gives 60 branches per day."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_0956,1,numeric,3,1.0,INCORRECT,numeric answer 3 differs from final explanation number 1,"Two-thirds of 9 non-work emails are 6 to family, one-third of remaining 3 are 1 to boyfriend."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_1014,0,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, enough to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_1014,1,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, enough to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_1014,2,numeric,6,1.0,INCORRECT,numeric answer 6 differs from final explanation number 0.25,"After buying other fruits, Jamaar has $1.5 left, enough to buy 6 plums at $0.25 each."
+AR,GPT-4.1 mini,GSM8K,overconfident,GSM8K_1217,0,numeric,51,1.0,INCORRECT,numeric answer 51 differs from final explanation number 3,Pauline spent $30 in the first 5 years and $21 in the next 3 years after the price increase.
+AR,Grok,GSM8K,neutral,GSM8K_0012,1,numeric,13,0.9,CORRECT,numeric answer 13 differs from final explanation number 7.5,Net profit turns positive in year 13 after recovering the $90 initial cost at $7.50/year.
+AR,Grok,GSM8K,neutral,GSM8K_0025,2,numeric,2,0.95,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Known items total $33; $50 minus $33 leaves $17, which buys exactly 2 boxes at $8.50 each."
+AR,Grok,GSM8K,neutral,GSM8K_0041,0,numeric,200,0.9,CORRECT,numeric answer 200 differs from final explanation number 1000,"With gemstone, throw distance is 1200 feet, allowing 200 feet beyond the 1000-foot flame range."
+AR,Grok,GSM8K,neutral,GSM8K_0041,1,numeric,200,0.9,CORRECT,numeric answer 200 differs from final explanation number 1000,"Gemstone triples throw to 1200 feet, allowing 200 feet beyond the 1000-foot flame reach."
+AR,Grok,GSM8K,neutral,GSM8K_0041,2,numeric,200,0.9,CORRECT,numeric answer 200 differs from final explanation number 1000,"With gemstone throw is 1200 feet, allowing 200 feet beyond the 1000-foot flame reach."
+AR,Grok,GSM8K,neutral,GSM8K_0097,0,numeric,12,0.9,CORRECT,numeric answer 12 differs from final explanation number 3,32 oz sauce implies 64 oz tomatoes from 4 cans (3 tomatoes each).
+AR,Grok,GSM8K,neutral,GSM8K_0132,0,numeric,60,0.95,CORRECT,numeric answer 60 differs from final explanation number 6,Total rides: 6 roller coasters + 4 luges = 10 rides at 6 tickets each.
+AR,Grok,GSM8K,neutral,GSM8K_0148,0,numeric,30,0.95,CORRECT,numeric answer 30 differs from final explanation number 8,Tickets total $22; amount given equals cost plus $8 change.
+AR,Grok,GSM8K,neutral,GSM8K_0148,2,numeric,30,0.95,CORRECT,numeric answer 30 differs from final explanation number 8,Tickets total $22; amount given equals cost plus $8 change.
+AR,Grok,GSM8K,neutral,GSM8K_0231,0,numeric,50,0.85,CORRECT,numeric answer 50 differs from final explanation number 2,Kylie collected 25 shells Monday so Tuesday is 2 times that amount.
+AR,Grok,GSM8K,neutral,GSM8K_0260,2,numeric,11,0.95,CORRECT,numeric answer 11 differs from final explanation number 2,"66 cookies total is 5.5 dozen, requiring 11 cups at 2 cups per dozen."
+AR,Grok,GSM8K,neutral,GSM8K_0434,1,numeric,5,0.95,CORRECT,numeric answer 5 differs from final explanation number 75,Spent 495 cents total after 1% left; 120 on chips leaves 375 for 5 bars at 75 cents.
+AR,Grok,GSM8K,neutral,GSM8K_0434,2,numeric,5,0.95,CORRECT,numeric answer 5 differs from final explanation number 75,Spent 495 cents total after 1% left; 120 on chips leaves 375 for 5 bars at 75 cents.
+AR,Grok,GSM8K,neutral,GSM8K_0434,0,numeric,5,0.9,CORRECT,numeric answer 5 differs from final explanation number 75,Spent 495 cents total after 1% left; 120 on 3 chips leaves 375 for 5 candy bars at 75 cents.
+AR,Grok,GSM8K,neutral,GSM8K_0463,0,numeric,18,0.9,CORRECT,numeric answer 18 differs from final explanation number 3,Tip equals 15 divided by 5 which is 3 so total payment is 15 plus 3.
+AR,Grok,GSM8K,neutral,GSM8K_0608,1,numeric,8,0.9,CORRECT,numeric answer 8 differs from final explanation number 50,"Total after 30% discount on $60 is $42, leaving $8 from $50."
+AR,Grok,GSM8K,neutral,GSM8K_0608,2,numeric,8,0.9,CORRECT,numeric answer 8 differs from final explanation number 50,"Total before discount $60, 30% off yields $42 paid, so $8 remains from $50."
+AR,Grok,GSM8K,neutral,GSM8K_0608,0,numeric,8,0.9,CORRECT,numeric answer 8 differs from final explanation number 50,"Original total $60 minus 30% discount equals $42 paid, leaving $8 from $50."
+AR,Grok,GSM8K,neutral,GSM8K_0637,2,numeric,17,0.95,CORRECT,numeric answer 17 differs from final explanation number 3,Paisley ran 4 miles so Reggie ran 20; Lynn ran 3 fewer than Reggie.
+AR,Grok,GSM8K,neutral,GSM8K_0637,1,numeric,17,0.95,CORRECT,numeric answer 17 differs from final explanation number 3,Paisley ran 4 miles so Reggie ran 20; Lynn ran 3 fewer than Reggie.
+AR,Grok,GSM8K,neutral,GSM8K_1014,1,numeric,3,0.95,CORRECT,numeric answer 3 differs from final explanation number 0.25,"Spent $9.25 so far, leaving $0.75 for 3 plums at $0.25 each."
+AR,Grok,GSM8K,neutral,GSM8K_1014,2,numeric,3,0.95,CORRECT,numeric answer 3 differs from final explanation number 0.25,"After spending $9.25 on other fruits, $0.75 remains, buying exactly 3 plums at $0.25 each."
+AR,Grok,GSM8K,neutral,GSM8K_1014,0,numeric,3,0.95,CORRECT,numeric answer 3 differs from final explanation number 0.25,"Spent $9.25 so far, leaving $0.75 which buys exactly 3 plums at $0.25 each."
+AR,Grok,GSM8K,neutral,GSM8K_1043,1,numeric,130000,0.95,CORRECT,numeric answer 130000 differs from final explanation number 1000,Multiply 26 countries by 5 cities by 1000 people per city to get total population.
+AR,Grok,GSM8K,neutral,GSM8K_1043,0,numeric,130000,0.95,CORRECT,numeric answer 130000 differs from final explanation number 1000,Multiply 26 countries by 5 cities per country by 1000 people per city to get total population.
+AR,Grok,GSM8K,cautious,GSM8K_0012,1,numeric,13,0.9,CORRECT,numeric answer 13 differs from final explanation number 90,Net annual profit of $7.5 requires 13 years to exceed the $90 initial cost.
+AR,Grok,GSM8K,cautious,GSM8K_0025,2,numeric,2,0.95,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Non-pizza items total $33; $50 minus $33 leaves $17, which buys exactly 2 boxes at $8.50 each."
+AR,Grok,GSM8K,cautious,GSM8K_0025,0,numeric,2,0.95,CORRECT,numeric answer 2 differs from final explanation number 8.5,"Non-pizza items total $33; $50 minus $33 leaves $17, which buys exactly 2 boxes at $8.50 each."
+AR,Grok,GSM8K,cautious,GSM8K_0041,1,numeric,200,0.9,CORRECT,numeric answer 200 differs from final explanation number 1000,"With gemstone throw is 1200 feet, so 200 feet beyond 1000-foot flame range."
+AR,Grok,GSM8K,cautious,GSM8K_0041,2,numeric,200,0.9,CORRECT,numeric answer 200 differs from final explanation number 1000,"With gemstone, throw distance is 1200 feet, so 200 feet beyond the 1000-foot flame range."
+AR,Grok,GSM8K,cautious,GSM8K_0097,2,numeric,12,0.9,CORRECT,numeric answer 12 differs from final explanation number 3,32 oz sauce implies 64 oz tomatoes from 4 cans (3 tomatoes each).
+AR,Grok,GSM8K,cautious,GSM8K_0132,1,numeric,60,0.95,CORRECT,numeric answer 60 differs from final explanation number 6,Total rides: 6 roller coasters + 4 luges = 10 rides at 6 tickets each.
+AR,Grok,GSM8K,cautious,GSM8K_0213,2,numeric,250,0.9,CORRECT,numeric answer 250 differs from final explanation number 3,"Day1=100, Day2=150; 500-250=250 on Day3."
+AR,Grok,GSM8K,cautious,GSM8K_0260,0,numeric,11,0.9,CORRECT,numeric answer 11 differs from final explanation number 2,"Total 66 cookies is 5.5 dozen, needing 11 cups at 2 cups per dozen."
+AR,Grok,GSM8K,cautious,GSM8K_0260,1,numeric,11,0.9,CORRECT,numeric answer 11 differs from final explanation number 2,"66 cookies total is 5.5 dozen, needing 11 cups at 2 cups per dozen."
+AR,Grok,GSM8K,cautious,GSM8K_0405,2,numeric,50,0.95,CORRECT,numeric answer 50 differs from final explanation number 15,20 people need 5 sandwiches requiring 5 lbs meat ($35) and cheese ($15).
+AR,Grok,GSM8K,cautious,GSM8K_0434,1,numeric,5,0.95,CORRECT,numeric answer 5 differs from final explanation number 75,"Converted $5 to 500 cents, spent 495 cents after 1% left, subtracted 120 cents for chips, divided remainder by 75."
+AR,Grok,GSM8K,cautious,GSM8K_0608,1,numeric,8,0.9,CORRECT,numeric answer 8 differs from final explanation number 50,"Total after 30% discount on $60 is $42, leaving $8 from $50."
+AR,Grok,GSM8K,cautious,GSM8K_1014,1,numeric,3,0.9,CORRECT,numeric answer 3 differs from final explanation number 0.25,Remaining $0.75 after prior purchases allows exactly 3 plums at $0.25 each.
+AR,Grok,GSM8K,cautious,GSM8K_1043,0,numeric,130000,0.95,CORRECT,numeric answer 130000 differs from final explanation number 1000,Multiplied 26 countries by 5 cities each by 1000 people per city.
+AR,Grok,GSM8K,cautious,GSM8K_1043,1,numeric,130000,0.95,CORRECT,numeric answer 130000 differs from final explanation number 1000,Multiply 26 countries by 5 cities each by 1000 people per city.
+AR,Grok,GSM8K,cautious,GSM8K_1217,1,numeric,75,0.9,CORRECT,numeric answer 75 differs from final explanation number 150,Calculated 15 visits at $2 plus 9 visits at $5 after 150% increase.
+AR,Grok,GSM8K,overconfident,GSM8K_0041,1,numeric,200,0.95,CORRECT,numeric answer 200 differs from final explanation number 1000,"With gemstone throw distance is 1200 feet, so 200 feet beyond the 1000-foot flame range."
+AR,Grok,GSM8K,overconfident,GSM8K_0041,0,numeric,200,0.95,CORRECT,numeric answer 200 differs from final explanation number 1000,"Gemstone triples throw to 1200 feet, allowing 200 feet beyond the 1000-foot flame reach."
+AR,Grok,GSM8K,overconfident,GSM8K_0041,2,numeric,200,0.95,CORRECT,numeric answer 200 differs from final explanation number 1000,With gemstone throw distance is 1200 feet so 200 feet beyond the 1000-foot flame reach.
+AR,Grok,GSM8K,overconfident,GSM8K_0132,2,numeric,60,0.95,CORRECT,numeric answer 60 differs from final explanation number 6,"Total rides are 10 (6 roller coasters + 4 luges), each costing 6 tickets."
+AR,Grok,GSM8K,overconfident,GSM8K_0148,2,numeric,30,0.95,CORRECT,numeric answer 30 differs from final explanation number 8,Total tickets cost $22; amount given equals cost plus $8 change.
+AR,Grok,GSM8K,overconfident,GSM8K_0165,1,numeric,77,0.95,CORRECT,numeric answer 77 differs from final explanation number 1500,Subtract total cost of items (1090+157+74+102=1423) from 1500 budget.
+AR,Grok,GSM8K,overconfident,GSM8K_0260,0,numeric,11,1.0,CORRECT,numeric answer 11 differs from final explanation number 2,"66 total cookies equal 5.5 dozen, requiring 11 cups at 2 cups per dozen."
+AR,Grok,GSM8K,overconfident,GSM8K_0231,2,numeric,50,0.9,CORRECT,numeric answer 50 differs from final explanation number 2,Robert collects 20 on Monday so Kylie collects 25; Tuesday is 2 times that amount.
+AR,Grok,GSM8K,overconfident,GSM8K_0434,0,numeric,5,0.95,CORRECT,numeric answer 5 differs from final explanation number 75,"Spent 495 cents total after 3 chips (120 cents), leaving 375 cents for 5 candy bars at 75 cents each."
+AR,Grok,GSM8K,overconfident,GSM8K_0434,1,numeric,5,0.95,CORRECT,numeric answer 5 differs from final explanation number 75,Spent 495 cents total after 1% left; 120 cents on chips leaves 375 cents for 5 candy bars at 75 cents each.
+AR,Grok,GSM8K,overconfident,GSM8K_0434,2,numeric,5,0.95,CORRECT,numeric answer 5 differs from final explanation number 75,Spent 495 cents total after 1% left; 120 on chips leaves 375 for 5 candy bars at 75 cents each.
+AR,Grok,GSM8K,overconfident,GSM8K_0521,2,numeric,39,0.95,CORRECT,numeric answer 39 differs from final explanation number 100,"After 12 Monday + 36 Tuesday + 13 Wednesday, 39 problems remain from 100."
+AR,Grok,GSM8K,overconfident,GSM8K_0608,0,numeric,8,0.95,CORRECT,numeric answer 8 differs from final explanation number 50,"Total before discount is 60, after 30% off is 42, leaving 8 from 50."
+AR,Grok,GSM8K,overconfident,GSM8K_0608,1,numeric,8,0.95,CORRECT,numeric answer 8 differs from final explanation number 50,"Total before discount $60, 30% off yields $42 paid, leaving $8 from $50."
+AR,Grok,GSM8K,overconfident,GSM8K_0608,2,numeric,8,0.9,CORRECT,numeric answer 8 differs from final explanation number 50,"Total before discount is 60, 30% off yields 42 paid, leaving 8 from 50."
+AR,Grok,GSM8K,overconfident,GSM8K_0637,0,numeric,17,0.95,CORRECT,numeric answer 17 differs from final explanation number 3,Paisley ran 4 miles so Reggie ran 20; Lynn ran 3 fewer than Reggie.
+AR,Grok,GSM8K,overconfident,GSM8K_0985,0,numeric,63,0.95,CORRECT,numeric answer 63 differs from final explanation number 7,Brother eats 9 pretzels per day so 63 in 7 days.
+AR,Grok,GSM8K,overconfident,GSM8K_0985,2,numeric,63,0.95,CORRECT,numeric answer 63 differs from final explanation number 7,Brother eats 9 pretzels per day so totals 63 over 7 days.
+AR,Grok,GSM8K,overconfident,GSM8K_1014,1,numeric,3,0.95,CORRECT,numeric answer 3 differs from final explanation number 0.25,Total spent is $9.25 leaving $0.75 which buys exactly 3 plums at $0.25 each.
+AR,Grok,GSM8K,overconfident,GSM8K_1014,0,numeric,3,0.95,CORRECT,numeric answer 3 differs from final explanation number 0.25,"After $9.25 spent, $0.75 remains, buying exactly 3 plums at $0.25 each."
+AR,Grok,GSM8K,overconfident,GSM8K_1014,2,numeric,3,0.95,CORRECT,numeric answer 3 differs from final explanation number 0.25,Remaining $0.75 after $9.25 spent allows exactly 3 plums at $0.25 each.
+AR,Grok,GSM8K,overconfident,GSM8K_1043,2,numeric,130000,0.95,CORRECT,numeric answer 130000 differs from final explanation number 1000,Multiply 26 countries by 5 cities each by 1000 people per city to get total population.
+AR,Grok,GSM8K,overconfident,GSM8K_1043,1,numeric,130000,0.95,CORRECT,numeric answer 130000 differs from final explanation number 1000,Multiplied 26 countries by 5 cities each by 1000 people per city to get total population.

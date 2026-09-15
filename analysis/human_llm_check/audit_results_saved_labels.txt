@@ -1,0 +1,22 @@
+Human--LLM Judge Agreement Audit (against stored judge labels)
+==============================================================
+Rows audited: 200
+Judge labels: CORRECTNESS in the judged generations used by every paper metric
+Observed agreement: 0.9750 (195/200)
+Wilson 95% CI for agreement: [0.9428, 0.9893]
+Expected agreement by chance: 0.5190
+Cohen's kappa: 0.9480
+Human label counts: correct=119, incorrect=81
+Stored judge label counts: correct=120, incorrect=80
+Disagreements: 5
+
+Disagreement rows:
+- MedQA_0089 | MedQA | Dream-org/Dream-v0-Instruct-7B | judge=correct | human=incorrect
+- TruthfulQA_0649 | TruthfulQA | google/gemini-2.5-flash | judge=correct | human=incorrect
+- TruthfulQA_0016 | TruthfulQA | Dream-org/Dream-v0-Instruct-7B | judge=incorrect | human=correct
+- TruthfulQA_0312 | TruthfulQA | google/gemini-2.5-flash | judge=incorrect | human=correct
+- MedQA_0498 | MedQA | Dream-org/Dream-v0-Instruct-7B | judge=correct | human=incorrect
+
+Rows where the audit sheet's judge column differs from the stored judge label:
+- MedQA_0089 | Dream-org/Dream-v0-Instruct-7B | overconfident sample 0 | stored judge=correct | sheet judge=incorrect | human=incorrect
+- TruthfulQA_0016 | Dream-org/Dream-v0-Instruct-7B | cautious sample 1 | stored judge=incorrect | sheet judge=correct | human=correct

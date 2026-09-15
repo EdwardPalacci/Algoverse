@@ -1,0 +1,3 @@
+family,generations,candidates,candidate_rate,gsm8k_candidates,mean_candidate_confidence
+AR,6750,263,0.038963,263,0.980228
+DLM,9000,343,0.038111,343,0.989038

@@ -551,12 +551,12 @@ def write_confidence_histogram_figure(path: Path, gens: list[Generation]) -> Non
 
 
 def draw_histogram_panel(fig: CairoFigure, left: int, right: int, top: int, bottom: int, title: str, rows: list[dict]) -> None:
-    fig.text((left + right) / 2, top - 22, title, 14, align="center", bold=True)
+    fig.text((left + right) / 2, top - 22, title, 18, align="center", bold=True)
     for tick in range(6):
         value = tick / 5
         y = bottom - value * (bottom - top)
         fig.line(left, y, right, y, "#dddddd", 0.8)
-        fig.text(left - 10, y + 4, f"{value:.1f}", 10, "#444444", align="right")
+        fig.text(left - 10, y + 6, f"{value:.1f}", 15, "#444444", align="right")
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
     slot = (right - left) / ECE_BINS
@@ -570,9 +570,9 @@ def draw_histogram_panel(fig: CairoFigure, left: int, right: int, top: int, bott
     for tick in range(6):
         value = tick / 5
         x = left + value * (right - left)
-        fig.text(x, bottom + 20, f"{value:.1f}", 10, "#444444", align="center")
-    fig.text((left + right) / 2, bottom + 48, "Reported confidence bin", 12, align="center")
-    fig.text(left - 48, (top + bottom) / 2, "Share of generations", 12, align="center", rotate=-1.5708)
+        fig.text(x, bottom + 24, f"{value:.1f}", 15, "#444444", align="center")
+    fig.text((left + right) / 2, bottom + 54, "Reported confidence bin", 16, align="center")
+    fig.text(left - 52, (top + bottom) / 2, "Share of generations", 15, align="center", rotate=-1.5708)
 
 
 def write_reliability_by_condition_figure(path: Path, gens: list[Generation]) -> None:
@@ -665,15 +665,13 @@ def draw_reliability_panel(
         else:
             fig.rect(x - 5, y - 5, 10, 10, FAMILY_COLORS[family])
         if 0 < bin_count <= 5:
-            label_y = y - 10
-            if y > bottom - 28:
-                label_y = bottom - 10 - (sparse_index % 2) * 20
-            label_x = x + 9
+            label_y = y - 12 if y - 12 > top + 14 else y + 26
+            label_x = x + 10
             align = "left"
-            if x > right - 44:
-                label_x = x - 9
+            if x > right - 50:
+                label_x = x - 10
                 align = "right"
-            fig.text(label_x, label_y, f"n={bin_count}", 13, "#333333", align=align)
+            fig.text(label_x, label_y, f"n={bin_count}", 14, "#333333", align=align)
             sparse_index += 1
 
 
@@ -706,9 +704,9 @@ def scale_unit_point(x_value: float | None, y_value: float | None, left: int, ri
 
 def draw_family_legend(fig: CairoFigure, x: int, y: int) -> None:
     for index, family in enumerate(FAMILY_ORDER):
-        xx = x + index * 170
-        fig.rect(xx, y - 12, 14, 14, FAMILY_COLORS[family])
-        fig.text(xx + 22, y, FAMILY_LABELS[family], 12)
+        xx = x + index * 300
+        fig.rect(xx, y - 15, 17, 17, FAMILY_COLORS[family])
+        fig.text(xx + 26, y, FAMILY_LABELS[family], 17)
 
 
 def normalize_answer(answer: object) -> str:

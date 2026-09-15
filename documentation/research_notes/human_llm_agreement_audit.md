@@ -15,11 +15,32 @@ correctness labels.
 
 ## Current Agreement Result
 
-The completed audit contains 200 rows sampled from the saved judged generations.
-The human and LLM judge labels agree on 197 of 200 rows, giving observed
-agreement of 0.9850. Cohen's kappa is 0.9688, with expected chance agreement
-0.5190. The Wilson 95% confidence interval for observed agreement is
-[0.9568, 0.9949].
+Measured against the judge labels stored with the judged generations, which
+are the labels every paper metric uses, the human and LLM judge agree on 195 of
+200 rows: observed agreement 0.9750, Cohen's kappa 0.9480, expected chance
+agreement 0.5190, Wilson 95% interval [0.9428, 0.9893]. Reproduce with
+`analysis/human_llm_check/agreement_against_saved_labels.py`, which writes
+`audit_results_saved_labels.txt`.
+
+The earlier figure of 197/200 (kappa 0.9688) came from `calculate_kappa.py`,
+which reads the judge column of `perfect_audit_sheet.csv`. In two rows that
+column does not match the stored judge label and matches the human label
+instead:
+
+- `MedQA_0089`, Dream, overconfident sample 0: stored judge correct, sheet
+  judge incorrect, human incorrect. The sheet reason is the generic
+  deterministic multiple-choice comparison.
+- `TruthfulQA_0016`, Dream, cautious sample 1: stored judge incorrect, sheet
+  judge correct, human correct. The sheet's judge reason still argues the
+  answer repeats the misconception, i.e. supports the stored label.
+
+The frozen sample `raw_200_sample.jsonl` agrees with the stored labels in both
+rows. The camera-ready paper reports 195/200.
+
+The sample also contains two generations drawn twice (rows 57 and 156:
+TruthfulQA_0523, Mercury-2, overconfident sample 0; rows 137 and 186:
+TruthfulQA_0642, DiffusionGemma, cautious sample 2), with identical responses
+and labels. On the 198 distinct generations agreement is 193/198, kappa 0.948.
 
 ## Reproducibility Status
 
@@ -44,9 +65,12 @@ more procedural certainty than the artifact supports.
 
 ## Disagreements
 
-The three disagreement rows are listed in `audit_results.txt`:
+Against the stored labels there are five disagreement rows, listed in
+`audit_results_saved_labels.txt`:
 
+- `MedQA_0089`, Dream: judge correct, human incorrect.
 - `TruthfulQA_0649`, Gemini Flash: judge correct, human incorrect.
+- `TruthfulQA_0016`, Dream: judge incorrect, human correct.
 - `TruthfulQA_0312`, Gemini Flash: judge incorrect, human correct.
 - `MedQA_0498`, Dream: judge correct, human incorrect.
 

@@ -214,7 +214,14 @@ def grouped_by_confidence(rows: list[tuple[float, int]]) -> list[tuple[float, li
 
 
 def aurc(rows: list[dict]) -> float | None:
-    """Area under the risk-coverage curve; lower values are better."""
+    """Area under the risk-coverage curve; lower values are better.
+
+    Verbalized confidence is heavily tied (many generations report exactly 1.0),
+    so a plain sort would order tied generations by input file position and make
+    the result depend on row order. We return the expected empirical AURC over all
+    orderings of tied generations: inside a tie block of m generations holding e
+    errors, the expected error count after the j-th block member is j * e / m.
+    """
     usable = [
         row for row in rows
         if row.get("parsed_confidence") is not None
@@ -222,14 +229,26 @@ def aurc(rows: list[dict]) -> float | None:
     ]
     if not usable:
         return None
-    ranked = sorted(usable, key=lambda row: row["parsed_confidence"], reverse=True)
-    errors = 0
+    return mean(tie_averaged_risks(usable))
+
+
+def tie_averaged_risks(usable: list[dict]) -> list[float]:
+    """Expected selective risk R_k for k = 1..n, averaging over tie orderings."""
+    by_confidence: dict[float, list[dict]] = {}
+    for row in usable:
+        by_confidence.setdefault(row["parsed_confidence"], []).append(row)
     risks = []
-    for index, row in enumerate(ranked, start=1):
-        if row["correct_auto"] is False:
-            errors += 1
-        risks.append(errors / index)
-    return mean(risks)
+    done = 0
+    errors_before = 0.0
+    for confidence in sorted(by_confidence, reverse=True):
+        block = by_confidence[confidence]
+        size = len(block)
+        block_errors = sum(1 for row in block if row["correct_auto"] is False)
+        for j in range(1, size + 1):
+            risks.append((errors_before + j * block_errors / size) / (done + j))
+        done += size
+        errors_before += block_errors
+    return risks
 
 
 def metric_row(rows: list[dict], raw_count: int | None = None) -> dict:

@@ -74,6 +74,14 @@ def ece(rows: list[dict], bins: int = ECE_BINS) -> float | None:
 
 
 def aurc(rows: list[dict]) -> float | None:
+    """Area under the risk-coverage curve; lower values are better.
+
+    Verbalized confidence is heavily tied (many generations report exactly 1.0),
+    so a plain sort would order tied generations by input file position and make
+    the result depend on row order. We return the expected empirical AURC over all
+    orderings of tied generations: inside a tie block of m generations holding e
+    errors, the expected error count after the j-th block member is j * e / m.
+    """
     usable = [
         row for row in rows
         if row.get("parsed_confidence") is not None
@@ -81,14 +89,26 @@ def aurc(rows: list[dict]) -> float | None:
     ]
     if not usable:
         return None
-    ranked = sorted(usable, key=lambda row: row["parsed_confidence"], reverse=True)
-    errors = 0
+    return mean(tie_averaged_risks(usable))
+
+
+def tie_averaged_risks(usable: list[dict]) -> list[float]:
+    """Expected selective risk R_k for k = 1..n, averaging over tie orderings."""
+    by_confidence: dict[float, list[dict]] = {}
+    for row in usable:
+        by_confidence.setdefault(row["parsed_confidence"], []).append(row)
     risks = []
-    for index, row in enumerate(ranked, start=1):
-        if row["correct_auto"] is False:
-            errors += 1
-        risks.append(errors / index)
-    return mean(risks)
+    done = 0
+    errors_before = 0.0
+    for confidence in sorted(by_confidence, reverse=True):
+        block = by_confidence[confidence]
+        size = len(block)
+        block_errors = sum(1 for row in block if row["correct_auto"] is False)
+        for j in range(1, size + 1):
+            risks.append((errors_before + j * block_errors / size) / (done + j))
+        done += size
+        errors_before += block_errors
+    return risks
 
 
 def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
@@ -296,11 +316,13 @@ def draw_common_axes(
     fig.text(28, (top + bottom) / 2, y_label, label_size, align="center", rotate=-math.pi / 2)
 
 
-def draw_legend(fig: CairoFigure, labels: list[str], x: int, y: int) -> None:
+def draw_legend(fig: CairoFigure, labels: list[str], x: int, y: int, size: int = 13) -> None:
+    step = max(24, int(size * 1.8))
+    box = max(15, int(size * 1.1))
     for index, label in enumerate(labels):
-        yy = y + index * 24
-        fig.rect(x, yy - 11, 15, 15, COLORS[label])
-        fig.text(x + 23, yy + 1, label, 13)
+        yy = y + index * step
+        fig.rect(x, yy - box + 4, box, box, COLORS[label])
+        fig.text(x + box + 9, yy + 2, label, size)
 
 
 def draw_arrow(fig: CairoFigure, x0: float, y0: float, x1: float, y1: float, color: str = "#555555", width: float = 2.0) -> None:
@@ -322,36 +344,37 @@ def draw_centered_lines(fig: CairoFigure, x: float, y: float, lines: list[str], 
         fig.text(x, start_y + index * line_height, line, size, color, align="center", bold=bold_first and index == 0)
 
 
-def draw_flow_box(fig: CairoFigure, center_x: float, center_y: float, width: float, height: float, fill: str, lines: list[str]) -> None:
+def draw_flow_box(fig: CairoFigure, center_x: float, center_y: float, width: float, height: float, fill: str, lines: list[str], size: int = 13) -> None:
     x0 = center_x - width / 2
     y0 = center_y - height / 2
     x1 = center_x + width / 2
     y1 = center_y + height / 2
-    fig.draw.rounded_rectangle((x0, y0, x1, y1), radius=10, fill=fig._rgb(fill), outline=fig._rgb("#333333"), width=1)
-    draw_centered_lines(fig, center_x, center_y + 8, lines)
+    fig.draw.rounded_rectangle((x0, y0, x1, y1), radius=10, fill=fig._rgb(fill), outline=fig._rgb("#333333"), width=2)
+    draw_centered_lines(fig, center_x, center_y + size * 0.6, lines, size=size)
 
 
 def write_evaluation_flowchart_figure(path: Path) -> list[dict]:
     fig = CairoFigure(path, width=1100, height=720)
-    fig.text(70, 36, "Evaluation pipeline", 22, bold=True)
+    fig.text(40, 40, "Evaluation pipeline", 30, bold=True)
     box_fill = "#ffffff"
-    draw_flow_box(fig, 550, 95, 560, 64, box_fill, ["Input questions", "GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA"])
-    draw_flow_box(fig, 550, 185, 560, 64, box_fill, ["Prompted evaluation items", "neutral, cautious, overconfident"])
-    draw_flow_box(fig, 330, 305, 340, 72, box_fill, ["Autoregressive models", "Gemini, GPT-4.1 mini, Grok"])
-    draw_flow_box(fig, 770, 305, 340, 72, box_fill, ["Diffusion models", "Mercury-2, Dream, DiffusionGemma, LLaDA"])
-    draw_flow_box(fig, 550, 425, 560, 64, box_fill, ["Shared generation schema", "answer, confidence, short explanation"])
-    draw_flow_box(fig, 330, 545, 340, 72, box_fill, ["Correctness grading", "deterministic checks + LLM judge"])
-    draw_flow_box(fig, 770, 545, 340, 72, box_fill, ["Calibration analysis", "ECE, AURC, AUROC, HCWR"])
-    draw_flow_box(fig, 550, 655, 560, 62, box_fill, ["Evaluation outputs", "AR-DLM comparison, accuracy, calibration, prompt sensitivity"])
-    draw_arrow(fig, 550, 127, 550, 153)
-    draw_arrow(fig, 500, 217, 365, 268)
-    draw_arrow(fig, 600, 217, 735, 268)
-    draw_arrow(fig, 330, 341, 505, 393)
-    draw_arrow(fig, 770, 341, 595, 393)
-    draw_arrow(fig, 505, 457, 365, 509)
-    draw_arrow(fig, 595, 457, 735, 509)
-    draw_arrow(fig, 330, 581, 500, 626)
-    draw_arrow(fig, 770, 581, 600, 626)
+    s = 20
+    draw_flow_box(fig, 550, 95, 700, 66, box_fill, ["Input questions", "GSM8K, MedQA, SimpleQA, TriviaQA, TruthfulQA"], s)
+    draw_flow_box(fig, 550, 185, 700, 66, box_fill, ["Prompted evaluation items", "neutral, cautious, overconfident"], s)
+    draw_flow_box(fig, 320, 305, 430, 74, box_fill, ["Autoregressive models", "Gemini Flash, GPT-4.1 mini, Grok"], s)
+    draw_flow_box(fig, 780, 305, 430, 74, box_fill, ["Diffusion models", "Mercury-2, Dream, DiffusionGemma, LLaDA"], 19)
+    draw_flow_box(fig, 550, 425, 700, 66, box_fill, ["Shared generation schema", "answer, confidence, short explanation"], s)
+    draw_flow_box(fig, 320, 545, 430, 74, box_fill, ["Correctness grading", "deterministic checks + LLM judge"], s)
+    draw_flow_box(fig, 780, 545, 430, 74, box_fill, ["Calibration analysis", "ECE, AURC, AUROC, HCWR"], s)
+    draw_flow_box(fig, 550, 655, 700, 64, box_fill, ["Evaluation outputs", "AR vs. DLM: accuracy, calibration, prompt sensitivity"], s)
+    draw_arrow(fig, 550, 128, 550, 152)
+    draw_arrow(fig, 470, 218, 360, 268)
+    draw_arrow(fig, 630, 218, 740, 268)
+    draw_arrow(fig, 360, 342, 480, 392)
+    draw_arrow(fig, 740, 342, 620, 392)
+    draw_arrow(fig, 480, 458, 360, 508)
+    draw_arrow(fig, 620, 458, 740, 508)
+    draw_arrow(fig, 360, 582, 480, 623)
+    draw_arrow(fig, 740, 582, 620, 623)
     fig.write()
     return [
         {"stage_order": 1, "stage": "Input questions", "output": "250-question evaluation set"},
@@ -458,7 +481,7 @@ def write_reliability_ci_figure(path: Path, rows: list[dict]) -> list[dict]:
                 fig.rect(x - 5, y - 5, 10, 10, COLORS[label])
             if row["bin_count"] < 20:
                 label_y = y + 18 if y < top + 24 else y - 8
-                fig.text(x + 8, label_y, f"n={row['bin_count']}", 10, "#333333")
+                fig.text(x + 9, label_y, f"n={row['bin_count']}", 15, "#333333")
 
     fig.circle(735, 104, 5.0, COLORS["Autoregressive (AR)"])
     fig.text(752, 109, "AR: pooled across 3 models", 14)
@@ -495,12 +518,18 @@ def prompt_sensitivity_data(rows: list[dict]) -> list[dict]:
 
 
 def write_prompt_sensitivity_figure(path: Path, rows: list[dict]) -> list[dict]:
-    fig = CairoFigure(path, width=980, height=520)
-    fig.text(72, 34, "Prompt intervention metrics", 20, bold=True)
+    fig = CairoFigure(path, width=1000, height=580)
+    fig.text(40, 40, "Prompt intervention metrics", 26, bold=True)
     data = prompt_sensitivity_data(rows)
-    draw_metric_panel(fig, data, "ECE", "Expected calibration error", 88, 420, 82, 405, 0.65, ["cautious", "neutral", "overconfident"])
-    draw_metric_panel(fig, data, "AURC", "Area under risk-coverage", 530, 862, 82, 405, 0.75, ["cautious", "neutral", "overconfident"])
-    draw_legend(fig, ["Autoregressive (AR)", "Diffusion language model (DLM)"], 330, 468)
+    conditions = ["cautious", "neutral", "overconfident"]
+    for metric, title, left, right in [
+        ("ECE", "Expected calibration error", 110, 460),
+        ("AURC", "Area under risk-coverage", 610, 960),
+    ]:
+        peak = max(row["value"] for row in data if row["metric"] == metric)
+        y_max = max(0.6, math.ceil(peak / 0.2) * 0.2)
+        draw_metric_panel(fig, data, metric, title, left, right, 110, 440, y_max, conditions)
+    draw_legend(fig, ["Autoregressive (AR)", "Diffusion language model (DLM)"], 250, 530, size=19)
     fig.write()
     return data
 
@@ -514,42 +543,42 @@ def risk_coverage_curve_data(rows: list[dict]) -> list[dict]:
             and row.get("parsed_confidence") is not None
             and row.get("correct_auto") is not None
         ]
-        ranked = sorted(usable, key=lambda row: row["parsed_confidence"], reverse=True)
-        if not ranked:
+        if not usable:
             continue
+        risks = tie_averaged_risks(usable)
         for step in range(5, 101, 5):
             coverage = step / 100
-            count = max(1, round(len(ranked) * coverage))
-            selected = ranked[:count]
-            risk = sum(1 for row in selected if row["correct_auto"] is False) / len(selected)
+            count = max(1, round(len(usable) * coverage))
             output.append({
                 "model_family": family,
                 "coverage": coverage,
-                "risk": risk,
-                "N": len(selected),
+                "risk": risks[count - 1],
+                "N": count,
             })
     return output
 
 
 def write_risk_coverage_figure(path: Path, rows: list[dict]) -> list[dict]:
     data = risk_coverage_curve_data(rows)
-    fig = CairoFigure(path, width=920, height=540)
-    fig.text(70, 36, "Risk-coverage curves by model family", 20, bold=True)
-    left, right, top, bottom = 92, 680, 78, 420
-    y_max = max(0.75, math.ceil(max(row["risk"] for row in data) * 10) / 10) if data else 1.0
-    for index in range(6):
-        x_value = index / 5
-        y_value = y_max * index / 5
-        x = left + x_value * (right - left)
+    fig = CairoFigure(path, width=1000, height=600)
+    fig.text(40, 42, "Risk-coverage curves by model family", 26, bold=True)
+    left, right, top, bottom = 110, 640, 90, 470
+    peak = max(row["risk"] for row in data) if data else 1.0
+    y_max = max(0.8, math.ceil(peak / 0.2) * 0.2)
+    for index in range(int(round(y_max / 0.2)) + 1):
+        y_value = 0.2 * index
         y = bottom - (y_value / y_max) * (bottom - top)
         fig.line(left, y, right, y, "#dddddd", 0.8)
+        fig.text(left - 12, y + 7, f"{y_value:.1f}", 18, "#444444", align="right")
+    for index in range(6):
+        x_value = index / 5
+        x = left + x_value * (right - left)
         fig.line(x, top, x, bottom, "#dddddd", 0.8)
-        fig.text(x, bottom + 22, f"{x_value:.1f}", 12, "#444444", align="center")
-        fig.text(left - 12, y + 4, f"{y_value:.1f}", 12, "#444444", align="right")
+        fig.text(x, bottom + 30, f"{x_value:.1f}", 18, "#444444", align="center")
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
-    fig.text((left + right) / 2, bottom + 52, "Coverage retained by confidence ranking", 15, align="center")
-    fig.text(28, (top + bottom) / 2, "Risk among retained answers", 15, align="center", rotate=-math.pi / 2)
+    fig.text((left + right) / 2, bottom + 72, "Coverage retained by confidence ranking", 20, align="center")
+    fig.text(30, (top + bottom) / 2, "Risk among retained answers", 20, align="center", rotate=-math.pi / 2)
     labels = [("AR", "Autoregressive (AR)"), ("DLM", "Diffusion language model (DLM)")]
     for family, label in labels:
         family_rows = [row for row in data if row["model_family"] == family]
@@ -561,12 +590,18 @@ def write_risk_coverage_figure(path: Path, rows: list[dict]) -> list[dict]:
             for row in family_rows
         ]
         for (px, py), (qx, qy) in zip(coords, coords[1:]):
-            fig.line(px, py, qx, qy, COLORS[label], 2.2)
+            fig.line(px, py, qx, qy, COLORS[label], 2.6)
         for x, y in coords:
-            fig.circle(x, y, 3.5, COLORS[label])
-    draw_legend(fig, [label for _, label in labels], 710, 98)
-    fig.text(710, 180, "Lower curves indicate better", 12, "#555555")
-    fig.text(710, 200, "selective prediction.", 12, "#555555")
+            fig.circle(x, y, 4.5, COLORS[label])
+    draw_legend(fig, [label for _, label in labels], 665, 115, size=17)
+    for offset, line in enumerate([
+        "Height at full coverage is",
+        "1 - accuracy on parsed answers.",
+        "A curve that falls as coverage",
+        "shrinks means confidence helps",
+        "pick out correct answers.",
+    ]):
+        fig.text(665, 215 + offset * 27, line, 17, "#555555")
     fig.write()
     return data
 
@@ -720,15 +755,15 @@ def write_dataset_metric_figure(path: Path, rows: list[dict]) -> list[dict]:
 
 
 def draw_metric_panel(fig: CairoFigure, data: list[dict], metric: str, title: str, left: int, right: int, top: int, bottom: int, y_max: float, categories: list[str]) -> None:
-    fig.text((left + right) / 2, top - 24, title, 14, align="center", bold=True)
-    for index in range(4):
-        value = y_max * index / 3
+    fig.text((left + right) / 2, top - 30, title, 21, align="center", bold=True)
+    ticks = int(round(y_max / 0.2))
+    for index in range(ticks + 1):
+        value = 0.2 * index
         y = bottom - (value / y_max) * (bottom - top)
         fig.line(left, y, right, y, "#dddddd", 0.8)
-        fig.text(left - 10, y + 4, f"{value:.2f}", 10, "#444444", align="right")
+        fig.text(left - 12, y + 7, f"{value:.1f}", 18, "#444444", align="right")
     fig.line(left, bottom, right, bottom)
     fig.line(left, top, left, bottom)
-    fig.text(left - 46, (top + bottom) / 2, "Metric value", 12, align="center", rotate=-math.pi / 2)
     families = [("AR", "Autoregressive (AR)"), ("DLM", "Diffusion language model (DLM)")]
     slot = (right - left) / len(categories)
     bar_width = slot / 4
@@ -745,7 +780,7 @@ def draw_metric_panel(fig: CairoFigure, data: list[dict], metric: str, title: st
             fig.rect(x, y, bar_width, bottom - y, COLORS[label])
     for category_index, category in enumerate(categories):
         x = left + category_index * slot + slot / 2
-        fig.text(x, bottom + 24, category, 11, "#444444", align="center")
+        fig.text(x, bottom + 32, category, 18, "#333333", align="center")
 
 
 def produce_figures(rows: list[dict]) -> None:
@@ -791,14 +826,14 @@ def produce_figures(rows: list[dict]) -> None:
     write_csv(FIG_CSV_DIR / "figure_7_prompt_sensitivity_data.csv", prompt_data, ["metric", "model_family", "prompt_condition", "value", "N"])
     write_text(
         FIG_CAPTION_DIR / "figure_7_caption.txt",
-        "Figure 7. Prompt intervention metrics comparing autoregressive language models (AR) and diffusion language models (DLMs). ECE is expected calibration error using 10 equal-width confidence bins. AURC is area under the risk-coverage curve, where lower values indicate better confidence-based selective prediction.\n",
+        "Figure 7. Prompt intervention metrics comparing autoregressive language models (AR) and diffusion language models (DLMs), pooled over each family's generations. ECE is expected calibration error using 10 equal-width confidence bins. AURC is area under the risk-coverage curve, computed as the expected value over orderings of tied confidences; lower is better for both. ECE rises from cautious to neutral to overconfident prompting in both families. AURC rises from cautious to overconfident prompting, and for DLMs it is flat between neutral and overconfident.\n",
     )
 
     risk_data = write_risk_coverage_figure(FIG_PNG_DIR / "figure_8_risk_coverage_curve.png", rows)
     write_csv(FIG_CSV_DIR / "figure_8_risk_coverage_curve_data.csv", risk_data, ["model_family", "coverage", "risk", "N"])
     write_text(
         FIG_CAPTION_DIR / "figure_8_caption.txt",
-        "Figure 8. Risk-coverage curves by model family. Generations are sorted from highest to lowest reported confidence, and each point reports the empirical error rate among retained generations at a given coverage level. Lower curves indicate better confidence-based selective prediction and support the AURC values reported in the metric tables.\n",
+        "Figure 8. Risk-coverage curves by model family, pooled over prompt conditions. Generations are sorted from highest to lowest reported confidence and each point is the expected error rate among retained generations at that coverage, averaging over orderings of tied confidences. The height of each curve at full coverage is one minus the family's accuracy on parsed answers, so the vertical gap between the families largely reflects accuracy; confidence helps with selective prediction only where a curve falls as coverage shrinks.\n",
     )
 
     dataset_data = write_dataset_metric_figure(FIG_PNG_DIR / "figure_9_dataset_metrics_with_ci.png", rows)

@@ -15,7 +15,7 @@ rather than architecture-causal.
 **Evidence.** AR has lower aggregate ECE and better risk-coverage behavior than
 DLM in the family-level figures. Grok is the strongest AR model, while Dream and
 LLaDA substantially weaken the DLM family average. However, Mercury-2 is
-competitive with strong AR models on confidence ranking, with AURC 0.076 and
+competitive with strong AR models on confidence ranking, with AURC 0.077 and
 AUROC 0.903.
 
 **Main caveat.** The AR and DLM model sets are not matched for capability or

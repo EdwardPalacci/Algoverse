@@ -115,3 +115,32 @@ analysis/human_llm_check/generate_audit.py,code,Deterministic human-audit sample
 documentation/research_notes/human_llm_agreement_audit.md,documentation,Human-vs-LLM judge agreement audit notes,Results,true,true
 documentation/research_notes/evidence_to_claims.md,documentation,Figure/table evidence-to-claims map for paper analysis,Results,true,true
 documentation/research_notes/analysis_to_conclusions.md,documentation,Working analysis-to-conclusion claims for team review,Results,true,true
+analysis/stratified_calibration.py,code,Leave-one-model-out difficulty strata and per-family tables,Results,true,true
+analysis/matched_accuracy_calibration.py,code,"Accuracy-matched comparison with bootstrap, permutation and leave-one-model-out checks",Results,true,true
+analysis/parse_failure_robustness.py,code,Headline metrics with parse failures excluded,Appendix,true,true
+analysis/render_error_by_confidence.py,code,Per-model error rate by stated confidence figure (run after generate_paper_assets.py),Appendix,true,true
+analysis/human_llm_check/agreement_against_saved_labels.py,code,Human-judge agreement against the stored judge labels used by all metrics,Appendix,true,true
+analysis/human_llm_check/audit_results_saved_labels.txt,artifact,"Agreement summary against stored judge labels (195/200, kappa 0.948)",Appendix,true,true
+documentation/research_notes/accuracy_matched_calibration.md,documentation,"Method, checks and withdrawn claims for the accuracy-matched analysis",Results,true,true
+paper_assets/figures/pngs/figure_11_error_rate_by_confidence_per_model.png,figure,"Per-model error rate by stated confidence, neutral prompt",Appendix,true,true
+paper_assets/figures/csvs/figure_11_error_rate_by_confidence_per_model_data.csv,artifact,Data behind the per-model error-rate figure,Appendix,true,true
+paper_assets/tables/stratified/confidence_saturation_by_family.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/difficulty_bin_populations.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/family_by_difficulty.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/family_by_difficulty_by_dataset.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/family_by_difficulty_neutral.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/family_gap_by_difficulty.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/fine_cells_by_family.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/matched_accuracy_pairs.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/model_by_difficulty.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/residual_gap_bootstrap.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/residual_gap_drop_one_model.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/residual_gap_permutation.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/residual_gap_permutation_summary.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/stratified/within_stratum_discrimination.csv,artifact,Generated evaluation artifact,Results,true,true
+paper_assets/tables/quality_control/parse_failure_robustness_by_condition.csv,artifact,Generated evaluation artifact,Appendix,true,true
+paper_assets/tables/quality_control/parse_failure_robustness_by_family.csv,artifact,Generated evaluation artifact,Appendix,true,true
+paper_assets/tables/quality_control/parse_failure_robustness_by_model.csv,artifact,Generated evaluation artifact,Appendix,true,true
+analysis/prompt_condition_family_metrics.py,code,Pooled family-by-condition metrics with tie-averaged AURC,Results,true,true
+paper_assets/tables/quality_control/answer_explanation_candidates_by_family.csv,artifact,"Answer-explanation mismatch candidates by family (AR 263, DLM 343)",Appendix,true,true
+paper_assets/tables/quality_control/answer_explanation_disagreement_candidates_ar.csv,artifact,Answer-explanation mismatch candidates on AR generations,Appendix,true,true

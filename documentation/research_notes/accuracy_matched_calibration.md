@@ -99,14 +99,16 @@ the uncertainty estimates above are the relevant robustness statement there.
 - `analysis/parse_failure_robustness.py` — parse-failure comparison
 - Outputs: `paper_assets/tables/stratified/`, `paper_assets/tables/quality_control/`
 
-## Open item
+## Resolved: AURC tie handling
 
-An AURC caveat surfaced during review and is not yet fixed: `aurc()` in
-`analysis/generate_paper_assets.py` sorts by confidence with a stable sort, so
-ties are broken by input order. With confidence heavily tied at 1.0 this makes
-published AURC values dependent on file ordering. It does not affect the
-matched-accuracy result, which uses ECE and AUROC, but it should be fixed
-before the numbers are reused.
+`aurc()` in `analysis/generate_paper_assets.py` (and its copy in
+`render_figures.py`) previously sorted by confidence with a stable sort, so
+ties, very common at confidence 1.0, were broken by input file order. It now
+returns the expected AURC over all orderings of tied generations, and the
+risk-coverage curve uses the same expected risk. Published model AURC values
+moved, most for heavily tied models (DiffusionGemma 0.294 to 0.383, LLaDA 0.633
+to 0.728, Dream 0.616 to 0.651); Grok and Mercury-2 were essentially unchanged.
+The matched-accuracy result uses ECE and AUROC and did not change.
 
 ## Corrections made during review
 

@@ -260,6 +260,8 @@ def main() -> None:
     datasets = dataset_summary(rows)
     family_datasets = family_dataset_summary(rows)
     candidates = answer_explanation_candidates([row for row in rows if row.get("model_architecture") == "DLM"])
+    # The same heuristic on AR generations, so the family comparison in the paper is reproducible.
+    ar_candidates = answer_explanation_candidates([row for row in rows if row.get("model_architecture") == "AR"])
 
     write_csv(
         OUT_DIR / "anomaly_model_summary.csv",
@@ -288,6 +290,29 @@ def main() -> None:
             "family", "dataset", "N", "accuracy", "mean_confidence",
             "parse_failure_rate", "high_confidence_wrong_rate",
         ],
+    )
+    candidate_fields = [
+        "family", "model_label", "dataset", "condition", "question_id",
+        "sample_id", "answer_type", "answer", "confidence", "correctness_label",
+        "disagreement_flag", "short_explanation",
+    ]
+    write_csv(OUT_DIR / "answer_explanation_disagreement_candidates_ar.csv", ar_candidates, candidate_fields)
+    family_summary = []
+    for family, family_candidates in [("AR", ar_candidates), ("DLM", candidates)]:
+        generations = sum(1 for row in rows if row.get("model_architecture") == family)
+        confidences = [float(c["confidence"]) for c in family_candidates if c.get("confidence") not in (None, "")]
+        family_summary.append({
+            "family": family,
+            "generations": generations,
+            "candidates": len(family_candidates),
+            "candidate_rate": f"{len(family_candidates) / generations:.6f}" if generations else "",
+            "gsm8k_candidates": sum(1 for c in family_candidates if c.get("dataset") == "GSM8K"),
+            "mean_candidate_confidence": f"{sum(confidences) / len(confidences):.6f}" if confidences else "",
+        })
+    write_csv(
+        OUT_DIR / "answer_explanation_candidates_by_family.csv",
+        family_summary,
+        ["family", "generations", "candidates", "candidate_rate", "gsm8k_candidates", "mean_candidate_confidence"],
     )
     write_csv(
         OUT_DIR / "answer_explanation_disagreement_candidates.csv",

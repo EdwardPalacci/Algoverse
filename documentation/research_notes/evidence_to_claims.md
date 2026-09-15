@@ -17,16 +17,18 @@ differences.
   0.828, ECE 0.071, AURC 0.039, and AUROC 0.894.
 - Figure 3: AR reliability curves are closer to the diagonal than DLM curves
   across prompt conditions, especially in high-confidence regions.
-- Figure 8: confidence is more useful for selective prediction in the AR family.
-  At 5% coverage, AR risk is 0.337 while DLM risk is 0.560; at 50% coverage, AR
-  risk is 0.258 while DLM risk is 0.617.
+- Figure 8 (updated 2026-09-15, tie-averaged risk): AR risk is 0.274 at 5%
+  coverage, 0.246 at 50% and 0.283 at full coverage; DLM risk is 0.564 at both 5%
+  and 50%, above its 0.513 full-coverage risk. The family gap mostly reflects
+  accuracy rather than a more useful confidence ranking. (Earlier values of
+  0.337/0.258 vs 0.560/0.617 broke confidence ties by file order.)
 - Figure 9/Table 3: AR has higher family-level accuracy on every dataset in the
   250-question evaluation.
 
 **Weakening evidence.**
 
 - The strongest DLM, Mercury-2, is competitive with strong AR models on ranking
-  metrics: accuracy 0.720, ECE 0.192, AURC 0.076, and AUROC 0.903.
+  metrics: accuracy 0.720, ECE 0.192, AURC 0.077, and AUROC 0.903.
 - The AR side uses strong frontier models, while three DLMs are locally served
   with model-specific wrappers. This weakens a pure architecture explanation.
 - The DLM family result is strongly affected by Dream and LLaDA, which have low
@@ -53,6 +55,15 @@ causal claim."
 - AR baselines closer in scale/capability to the tested local DLMs.
 
 ## Claim 2: Prompt pressure changes confidence more than it changes accuracy.
+
+> Estimator note (2026-09-15): the numbers below were equal-weight means of
+> per-model metrics with ties broken by file order. The paper reports metrics
+> pooled over each family's generations with AURC averaged over orderings of
+> tied confidences, and `prompt_condition_family_metrics.csv` is now generated
+> with that estimator by `analysis/prompt_condition_family_metrics.py`. The
+> "0.399 vs 0.409" bullet below no longer holds under that estimator. Pooled, AURC rises from cautious
+> to overconfident for both families (AR 0.243 to 0.282, DLM 0.507 to 0.546), and
+> the DLM value is flat between neutral (0.545) and overconfident (0.546).
 
 **Cognitive status:** Strong for the current prompt interventions.
 
@@ -101,8 +112,11 @@ the count is useful for triage but not a final semantic label.
 
 **Supporting evidence.**
 
-- The quality-control mismatch table contains 343 candidates. All are DLM rows
-  and all are GSM8K rows under the current heuristic.
+- The quality-control mismatch table contains 343 DLM candidates, all GSM8K.
+  Correction (2026-09-15): the heuristic was originally run on DLM rows only.
+  Run on AR rows it flags 263 (3.9% of AR generations vs 3.8% for DLMs), also
+  all GSM8K, so mismatch candidates are not a DLM-specific phenomenon; see
+  `answer_explanation_candidates_by_family.csv`.
 - Candidate counts by prompt are similar after accounting for the fact that
   there are two non-neutral conditions: 108 cautious, 109 neutral, and 126
   overconfident.
@@ -176,8 +190,10 @@ ambiguous individual short-answer cases.
 
 **Supporting evidence.**
 
-- The 200-row human audit has 197/200 agreement between the human grader and the
-  LLM judge, observed agreement 0.9850, and Cohen's kappa 0.9688.
+- The 200-row human audit has 195/200 agreement between the human grader and the
+  stored LLM judge labels, observed agreement 0.9750, and Cohen's kappa 0.9480.
+  (An earlier 197/200 figure used an audit-sheet judge column that differs from
+  the stored labels in two rows; see human_llm_agreement_audit.md.)
 - The audit sample includes all seven models, all five datasets, and all three
   prompt conditions.
 
